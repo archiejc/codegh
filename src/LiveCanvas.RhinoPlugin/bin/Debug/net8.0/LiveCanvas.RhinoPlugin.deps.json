@@ -1,0 +1,109 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "LiveCanvas.RhinoPlugin/1.0.0": {
+        "dependencies": {
+          "Grasshopper": "8.25.25328.11001",
+          "LiveCanvas.Bridge.Protocol": "1.0.0",
+          "LiveCanvas.Contracts": "1.0.0",
+          "LiveCanvas.Core": "1.0.0"
+        },
+        "runtime": {
+          "LiveCanvas.RhinoPlugin.rhp": {}
+        }
+      },
+      "Grasshopper/8.25.25328.11001": {
+        "dependencies": {
+          "RhinoCommon": "8.25.25328.11001"
+        }
+      },
+      "Microsoft.Win32.SystemEvents/7.0.0": {},
+      "RhinoCommon/8.25.25328.11001": {
+        "dependencies": {
+          "System.Drawing.Common": "7.0.0"
+        }
+      },
+      "System.Drawing.Common/7.0.0": {
+        "dependencies": {
+          "Microsoft.Win32.SystemEvents": "7.0.0"
+        }
+      },
+      "LiveCanvas.Bridge.Protocol/1.0.0": {
+        "dependencies": {
+          "LiveCanvas.Contracts": "1.0.0"
+        },
+        "runtime": {
+          "LiveCanvas.Bridge.Protocol.dll": {}
+        }
+      },
+      "LiveCanvas.Contracts/1.0.0": {
+        "runtime": {
+          "LiveCanvas.Contracts.dll": {}
+        }
+      },
+      "LiveCanvas.Core/1.0.0": {
+        "dependencies": {
+          "LiveCanvas.Contracts": "1.0.0"
+        },
+        "runtime": {
+          "LiveCanvas.Core.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "LiveCanvas.RhinoPlugin/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Grasshopper/8.25.25328.11001": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1uFL9pmgCEbYFd1b3JFGHaLEjQuRgFsiRHmP5u73mdEMdO6+5F/pNV1dQZr3YGLDovUmgrc+jmpsme7wr/J01A==",
+      "path": "grasshopper/8.25.25328.11001",
+      "hashPath": "grasshopper.8.25.25328.11001.nupkg.sha512"
+    },
+    "Microsoft.Win32.SystemEvents/7.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-2nXPrhdAyAzir0gLl8Yy8S5Mnm/uBSQQA7jEsILOS1MTyS7DbmV1NgViMtvV1sfCD1ebITpNwb1NIinKeJgUVQ==",
+      "path": "microsoft.win32.systemevents/7.0.0",
+      "hashPath": "microsoft.win32.systemevents.7.0.0.nupkg.sha512"
+    },
+    "RhinoCommon/8.25.25328.11001": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-PDKR9GwqyUXUkTulV4J0dzDIf/aWqSJkL7nkS8ReAx8xhnt/+RQpE8gTjOSCmkSU2tjG6WzclowbTxwMTU7VAA==",
+      "path": "rhinocommon/8.25.25328.11001",
+      "hashPath": "rhinocommon.8.25.25328.11001.nupkg.sha512"
+    },
+    "System.Drawing.Common/7.0.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-KIX+oBU38pxkKPxvLcLfIkOV5Ien8ReN78wro7OF5/erwcmortzeFx+iBswlh2Vz6gVne0khocQudGwaO1Ey6A==",
+      "path": "system.drawing.common/7.0.0",
+      "hashPath": "system.drawing.common.7.0.0.nupkg.sha512"
+    },
+    "LiveCanvas.Bridge.Protocol/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "LiveCanvas.Contracts/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "LiveCanvas.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

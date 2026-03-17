@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LiveCanvas.Contracts\LiveCanvas.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\LiveCanvas.Core\LiveCanvas.Core.csproj" />
+    <ProjectReference Include="..\..\src\LiveCanvas.Bridge.Protocol\LiveCanvas.Bridge.Protocol.csproj" />
+    <ProjectReference Include="..\..\src\LiveCanvas.AgentHost\LiveCanvas.AgentHost.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <ProjectReference Include="..\..\src\LiveCanvas.RhinoPlugin\LiveCanvas.RhinoPlugin.csproj" />
+  </ItemGroup>
+</Project>

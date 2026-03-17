@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>LiveCanvas.Core</RootNamespace>
+    <AssemblyName>LiveCanvas.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LiveCanvas.Contracts\LiveCanvas.Contracts.csproj" />
+  </ItemGroup>
+</Project>

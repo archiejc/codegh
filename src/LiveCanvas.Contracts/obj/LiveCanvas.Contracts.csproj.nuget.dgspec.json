@@ -1,0 +1,70 @@
+{
+  "format": 1,
+  "restore": {
+    "/Users/jiachenbu/.config/superpowers/worktrees/codegh/codex-live-canvas-builder-v0/src/LiveCanvas.Contracts/LiveCanvas.Contracts.csproj": {}
+  },
+  "projects": {
+    "/Users/jiachenbu/.config/superpowers/worktrees/codegh/codex-live-canvas-builder-v0/src/LiveCanvas.Contracts/LiveCanvas.Contracts.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "/Users/jiachenbu/.config/superpowers/worktrees/codegh/codex-live-canvas-builder-v0/src/LiveCanvas.Contracts/LiveCanvas.Contracts.csproj",
+        "projectName": "LiveCanvas.Contracts",
+        "projectPath": "/Users/jiachenbu/.config/superpowers/worktrees/codegh/codex-live-canvas-builder-v0/src/LiveCanvas.Contracts/LiveCanvas.Contracts.csproj",
+        "packagesPath": "/Users/jiachenbu/.nuget/packages/",
+        "outputPath": "/Users/jiachenbu/.config/superpowers/worktrees/codegh/codex-live-canvas-builder-v0/src/LiveCanvas.Contracts/obj/",
+        "projectStyle": "PackageReference",
+        "centralPackageVersionsManagementEnabled": true,
+        "configFilePaths": [
+          "/Users/jiachenbu/.nuget/NuGet/NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "centralPackageVersions": {
+            "coverlet.collector": "[6.0.4, )",
+            "FluentAssertions": "[6.12.1, )",
+            "Grasshopper": "[8.25.25328.11001, )",
+            "Microsoft.NET.Test.Sdk": "[17.11.1, )",
+            "xunit": "[2.9.2, )",
+            "xunit.runner.visualstudio": "[2.8.2, )"
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "/opt/homebrew/Cellar/dotnet@8/8.0.125/libexec/sdk/8.0.125/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

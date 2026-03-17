@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "dgSpecHash": "u+7fiEQQPwQOxW56v+VrcHfhZ7e7IL2ujQGMKGS17TfHQhu2DOh8lD6kw/t6sLrd5wbHitoU81jC3NnHFsN02Q==",
+  "success": true,
+  "projectFilePath": "/Users/jiachenbu/.config/superpowers/worktrees/codegh/codex-live-canvas-builder-v0/src/LiveCanvas.RhinoPlugin/LiveCanvas.RhinoPlugin.csproj",
+  "expectedPackageFiles": [
+    "/Users/jiachenbu/.nuget/packages/grasshopper/8.25.25328.11001/grasshopper.8.25.25328.11001.nupkg.sha512",
+    "/Users/jiachenbu/.nuget/packages/microsoft.win32.systemevents/7.0.0/microsoft.win32.systemevents.7.0.0.nupkg.sha512",
+    "/Users/jiachenbu/.nuget/packages/rhinocommon/8.25.25328.11001/rhinocommon.8.25.25328.11001.nupkg.sha512",
+    "/Users/jiachenbu/.nuget/packages/system.drawing.common/7.0.0/system.drawing.common.7.0.0.nupkg.sha512",
+    "/Users/jiachenbu/.nuget/packages/microsoft.windowsdesktop.app.ref/8.0.25/microsoft.windowsdesktop.app.ref.8.0.25.nupkg.sha512",
+    "/Users/jiachenbu/.nuget/packages/microsoft.windowsdesktop.app.ref/8.0.25/microsoft.windowsdesktop.app.ref.8.0.25.nupkg.sha512"
+  ],
+  "logs": []
+}
