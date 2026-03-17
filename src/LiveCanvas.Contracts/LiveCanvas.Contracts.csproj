@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>LiveCanvas.Contracts</RootNamespace>
+    <AssemblyName>LiveCanvas.Contracts</AssemblyName>
+  </PropertyGroup>
+</Project>

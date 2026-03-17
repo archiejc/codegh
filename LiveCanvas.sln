@@ -1,0 +1,99 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{5B9DF4CA-399B-45C1-B558-23AB0134B78C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.Contracts", "src\LiveCanvas.Contracts\LiveCanvas.Contracts.csproj", "{B69D2E38-F3C2-402C-91A4-A4263690E438}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.Core", "src\LiveCanvas.Core\LiveCanvas.Core.csproj", "{509EDCC1-DA90-43BC-A1A3-0E06B74E79BD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.Bridge.Protocol", "src\LiveCanvas.Bridge.Protocol\LiveCanvas.Bridge.Protocol.csproj", "{DDEA2037-79B8-476C-A7BF-A6DD98AAECC9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.AgentHost", "src\LiveCanvas.AgentHost\LiveCanvas.AgentHost.csproj", "{19C55F44-00A0-4723-9104-9A2EED8121C5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.RhinoPlugin", "src\LiveCanvas.RhinoPlugin\LiveCanvas.RhinoPlugin.csproj", "{1FCA23CA-199D-4019-95B6-FF8400AF30CC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{21918DB9-E396-4D43-984C-4B48344974A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.Contracts.Tests", "tests\LiveCanvas.Contracts.Tests\LiveCanvas.Contracts.Tests.csproj", "{7768373E-0357-44E2-9E8D-0BB135E66551}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.Core.Tests", "tests\LiveCanvas.Core.Tests\LiveCanvas.Core.Tests.csproj", "{2646007A-7A2E-453C-896A-840B33F00CBA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.Bridge.Protocol.Tests", "tests\LiveCanvas.Bridge.Protocol.Tests\LiveCanvas.Bridge.Protocol.Tests.csproj", "{03C76163-F006-4B2E-8D58-4B307F1552DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.AgentHost.Tests", "tests\LiveCanvas.AgentHost.Tests\LiveCanvas.AgentHost.Tests.csproj", "{62C40AAD-155E-417A-83E8-9FA68EE88F71}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.RhinoPlugin.Tests", "tests\LiveCanvas.RhinoPlugin.Tests\LiveCanvas.RhinoPlugin.Tests.csproj", "{8D409335-8E34-40A3-9FE7-B3807DC40461}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LiveCanvas.E2E.Tests", "tests\LiveCanvas.E2E.Tests\LiveCanvas.E2E.Tests.csproj", "{CB42CF6E-CE82-4CFB-A32F-A5219C660F67}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B69D2E38-F3C2-402C-91A4-A4263690E438}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B69D2E38-F3C2-402C-91A4-A4263690E438}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B69D2E38-F3C2-402C-91A4-A4263690E438}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B69D2E38-F3C2-402C-91A4-A4263690E438}.Release|Any CPU.Build.0 = Release|Any CPU
+		{509EDCC1-DA90-43BC-A1A3-0E06B74E79BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{509EDCC1-DA90-43BC-A1A3-0E06B74E79BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{509EDCC1-DA90-43BC-A1A3-0E06B74E79BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{509EDCC1-DA90-43BC-A1A3-0E06B74E79BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDEA2037-79B8-476C-A7BF-A6DD98AAECC9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDEA2037-79B8-476C-A7BF-A6DD98AAECC9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDEA2037-79B8-476C-A7BF-A6DD98AAECC9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDEA2037-79B8-476C-A7BF-A6DD98AAECC9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{19C55F44-00A0-4723-9104-9A2EED8121C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{19C55F44-00A0-4723-9104-9A2EED8121C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{19C55F44-00A0-4723-9104-9A2EED8121C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{19C55F44-00A0-4723-9104-9A2EED8121C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FCA23CA-199D-4019-95B6-FF8400AF30CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1FCA23CA-199D-4019-95B6-FF8400AF30CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FCA23CA-199D-4019-95B6-FF8400AF30CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1FCA23CA-199D-4019-95B6-FF8400AF30CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7768373E-0357-44E2-9E8D-0BB135E66551}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7768373E-0357-44E2-9E8D-0BB135E66551}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7768373E-0357-44E2-9E8D-0BB135E66551}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7768373E-0357-44E2-9E8D-0BB135E66551}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2646007A-7A2E-453C-896A-840B33F00CBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2646007A-7A2E-453C-896A-840B33F00CBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2646007A-7A2E-453C-896A-840B33F00CBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2646007A-7A2E-453C-896A-840B33F00CBA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03C76163-F006-4B2E-8D58-4B307F1552DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03C76163-F006-4B2E-8D58-4B307F1552DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03C76163-F006-4B2E-8D58-4B307F1552DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03C76163-F006-4B2E-8D58-4B307F1552DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{62C40AAD-155E-417A-83E8-9FA68EE88F71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{62C40AAD-155E-417A-83E8-9FA68EE88F71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{62C40AAD-155E-417A-83E8-9FA68EE88F71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{62C40AAD-155E-417A-83E8-9FA68EE88F71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D409335-8E34-40A3-9FE7-B3807DC40461}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D409335-8E34-40A3-9FE7-B3807DC40461}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D409335-8E34-40A3-9FE7-B3807DC40461}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D409335-8E34-40A3-9FE7-B3807DC40461}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB42CF6E-CE82-4CFB-A32F-A5219C660F67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB42CF6E-CE82-4CFB-A32F-A5219C660F67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB42CF6E-CE82-4CFB-A32F-A5219C660F67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB42CF6E-CE82-4CFB-A32F-A5219C660F67}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B69D2E38-F3C2-402C-91A4-A4263690E438} = {5B9DF4CA-399B-45C1-B558-23AB0134B78C}
+		{509EDCC1-DA90-43BC-A1A3-0E06B74E79BD} = {5B9DF4CA-399B-45C1-B558-23AB0134B78C}
+		{DDEA2037-79B8-476C-A7BF-A6DD98AAECC9} = {5B9DF4CA-399B-45C1-B558-23AB0134B78C}
+		{19C55F44-00A0-4723-9104-9A2EED8121C5} = {5B9DF4CA-399B-45C1-B558-23AB0134B78C}
+		{1FCA23CA-199D-4019-95B6-FF8400AF30CC} = {5B9DF4CA-399B-45C1-B558-23AB0134B78C}
+		{7768373E-0357-44E2-9E8D-0BB135E66551} = {21918DB9-E396-4D43-984C-4B48344974A5}
+		{2646007A-7A2E-453C-896A-840B33F00CBA} = {21918DB9-E396-4D43-984C-4B48344974A5}
+		{03C76163-F006-4B2E-8D58-4B307F1552DE} = {21918DB9-E396-4D43-984C-4B48344974A5}
+		{62C40AAD-155E-417A-83E8-9FA68EE88F71} = {21918DB9-E396-4D43-984C-4B48344974A5}
+		{8D409335-8E34-40A3-9FE7-B3807DC40461} = {21918DB9-E396-4D43-984C-4B48344974A5}
+		{CB42CF6E-CE82-4CFB-A32F-A5219C660F67} = {21918DB9-E396-4D43-984C-4B48344974A5}
+	EndGlobalSection
+EndGlobal

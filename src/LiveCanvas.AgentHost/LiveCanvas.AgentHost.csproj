@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>LiveCanvas.AgentHost</RootNamespace>
+    <AssemblyName>LiveCanvas.AgentHost</AssemblyName>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LiveCanvas.Contracts\LiveCanvas.Contracts.csproj" />
+    <ProjectReference Include="..\LiveCanvas.Core\LiveCanvas.Core.csproj" />
+    <ProjectReference Include="..\LiveCanvas.Bridge.Protocol\LiveCanvas.Bridge.Protocol.csproj" />
+  </ItemGroup>
+</Project>
