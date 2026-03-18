@@ -15,14 +15,16 @@ public class SmokeHarnessCliTests
         options.RunMcpCheck.Should().BeTrue();
         options.Configuration.Should().Be("Debug");
         options.LivePreflightTimeoutSeconds.Should().Be(10);
+        options.Scenario.Should().Be(SmokeHarnessScenario.Smoke);
     }
 
     [Fact]
-    public void parse_supports_live_mode_and_optional_flags()
+    public void parse_supports_live_mode_scenarios_and_optional_flags()
     {
         var options = SmokeHarnessCli.Parse(
             [
                 "--mode", "live",
+                "--scenario", "absolute-towers",
                 "--bridge-uri", "ws://127.0.0.1:17881/livecanvas/v0",
                 "--live-preflight-timeout-seconds", "15",
                 "--skip-build-agent-host",
@@ -30,6 +32,7 @@ public class SmokeHarnessCliTests
             ]);
 
         options.Mode.Should().Be(SmokeHarnessMode.Live);
+        options.Scenario.Should().Be(SmokeHarnessScenario.AbsoluteTowers);
         options.BridgeUri.Should().Be("ws://127.0.0.1:17881/livecanvas/v0");
         options.LivePreflightTimeoutSeconds.Should().Be(15);
         options.SkipBuildAgentHost.Should().BeTrue();

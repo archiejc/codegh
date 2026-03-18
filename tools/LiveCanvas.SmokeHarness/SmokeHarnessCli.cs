@@ -12,6 +12,7 @@ internal static class SmokeHarnessCli
         var runMcpCheck = true;
         var configuration = "Debug";
         var mode = SmokeHarnessMode.Mock;
+        var scenario = SmokeHarnessScenario.Smoke;
         string? bridgeUri = null;
         var livePreflightTimeoutSeconds = 10;
         var skipBuildAgentHost = false;
@@ -25,6 +26,9 @@ internal static class SmokeHarnessCli
                     break;
                 case "--agent-host-project":
                     agentHostProjectPath = RequireValue(args, ref i, "--agent-host-project");
+                    break;
+                case "--scenario":
+                    scenario = ParseScenario(RequireValue(args, ref i, "--scenario"));
                     break;
                 case "--agent-host-dll":
                     agentHostDllPath = RequireValue(args, ref i, "--agent-host-dll");
@@ -87,6 +91,7 @@ internal static class SmokeHarnessCli
         return new SmokeHarnessOptions(
             AgentHostProjectPath: agentHostProjectPath,
             Mode: mode,
+            Scenario: scenario,
             AgentHostDllPath: agentHostDllPath,
             SkipBuildAgentHost: skipBuildAgentHost,
             OutputDirectory: outputDirectory,
@@ -120,6 +125,14 @@ internal static class SmokeHarnessCli
             "mock" => SmokeHarnessMode.Mock,
             "live" => SmokeHarnessMode.Live,
             _ => throw new ArgumentException($"Unsupported mode '{rawValue}'. Expected 'mock' or 'live'.")
+        };
+
+    private static SmokeHarnessScenario ParseScenario(string rawValue) =>
+        rawValue.ToLowerInvariant() switch
+        {
+            "smoke" => SmokeHarnessScenario.Smoke,
+            "absolute-towers" => SmokeHarnessScenario.AbsoluteTowers,
+            _ => throw new ArgumentException($"Unsupported scenario '{rawValue}'. Expected 'smoke' or 'absolute-towers'.")
         };
 
     private static string ParseConfiguration(string rawValue) =>

@@ -6,6 +6,7 @@ namespace LiveCanvas.SmokeHarness;
 public sealed record SmokeHarnessOptions(
     string AgentHostProjectPath,
     SmokeHarnessMode Mode = SmokeHarnessMode.Mock,
+    SmokeHarnessScenario Scenario = SmokeHarnessScenario.Smoke,
     string? AgentHostDllPath = null,
     bool SkipBuildAgentHost = false,
     string? OutputDirectory = null,
@@ -27,6 +28,12 @@ public enum SmokeHarnessMode
     Live
 }
 
+public enum SmokeHarnessScenario
+{
+    Smoke,
+    AbsoluteTowers
+}
+
 internal sealed record SmokeSessionSummary(
     string Platform,
     string? RhinoVersion,
@@ -34,6 +41,7 @@ internal sealed record SmokeSessionSummary(
 
 internal sealed record SmokeArtifactManifest(
     string Mode,
+    string Scenario,
     string BridgeUri,
     string OutputDirectory,
     string PreviewPath,
@@ -68,7 +76,7 @@ internal sealed class HarnessRunContext
         OutputDirectory = outputDirectory;
         this.jsonOptions = jsonOptions;
         PreviewPath = Path.Combine(outputDirectory, "preview.png");
-        GhPath = Path.Combine(outputDirectory, "smoke.gh");
+        GhPath = Path.Combine(outputDirectory, GetScenarioFileName(options.Scenario));
         ManifestPath = Path.Combine(outputDirectory, "manifest.json");
         TranscriptPath = Path.Combine(outputDirectory, "transcript.json");
         StartedUtc = DateTimeOffset.UtcNow;
@@ -141,6 +149,14 @@ internal sealed class HarnessRunContext
             _ => JsonSerializer.SerializeToElement(value, jsonOptions)
         };
     }
+
+    private static string GetScenarioFileName(SmokeHarnessScenario scenario) =>
+        scenario switch
+        {
+            SmokeHarnessScenario.Smoke => "smoke.gh",
+            SmokeHarnessScenario.AbsoluteTowers => "absolute-towers.gh",
+            _ => "scene.gh"
+        };
 }
 
 internal sealed class SmokeHarnessFailureException : Exception

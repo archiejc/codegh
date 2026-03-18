@@ -32,32 +32,137 @@ public sealed class SmokeHarnessRunner
         "gh_save_document"
     ];
 
-    private static readonly IReadOnlyList<SmokeGraphComponentDefinition> SmokeComponents =
-    [
-        new("width_slider", "number_slider", 40, 20, "Width", new GhComponentConfig(Slider: new SliderConfig(1, 50, 20, false))),
-        new("depth_slider", "number_slider", 40, 70, "Depth", new GhComponentConfig(Slider: new SliderConfig(1, 50, 12, false))),
-        new("height_slider", "number_slider", 760, 20, "Height", new GhComponentConfig(Slider: new SliderConfig(1, 80, 18, false))),
-        new("xy_plane", "xy_plane", 40, 160, "XY", new GhComponentConfig(Nickname: "XY")),
-        new("width_domain", "construct_domain", 260, 20, "Width Domain", new GhComponentConfig(Nickname: "W Domain")),
-        new("depth_domain", "construct_domain", 260, 70, "Depth Domain", new GhComponentConfig(Nickname: "D Domain")),
-        new("rectangle", "rectangle", 500, 160, "Rect", new GhComponentConfig(Nickname: "Rect")),
-        new("boundary_surfaces", "boundary_surfaces", 740, 160, "Brep", new GhComponentConfig(Nickname: "Brep")),
-        new("vector_xyz", "vector_xyz", 980, 160, "Vec", new GhComponentConfig(Nickname: "Vec")),
-        new("extrude", "extrude", 1220, 160, "Extrude", new GhComponentConfig(Nickname: "Extrude"))
-    ];
+    private static readonly SmokeScenarioDefinition SmokeScenario = new(
+        SmokeHarnessScenario.Smoke,
+        "LiveCanvas Smoke",
+        [
+            new("width_slider", "number_slider", 40, 20, "Width", Slider(1, 50, 20)),
+            new("depth_slider", "number_slider", 40, 70, "Depth", Slider(1, 50, 12)),
+            new("height_slider", "number_slider", 760, 20, "Height", Slider(1, 80, 18)),
+            new("xy_plane", "xy_plane", 40, 160, "XY", Named("XY")),
+            new("width_domain", "construct_domain", 260, 20, "Width Domain", Named("W Domain")),
+            new("depth_domain", "construct_domain", 260, 70, "Depth Domain", Named("D Domain")),
+            new("rectangle", "rectangle", 500, 160, "Rect", Named("Rect")),
+            new("boundary_surfaces", "boundary_surfaces", 740, 160, "Brep", Named("Brep")),
+            new("vector_xyz", "vector_xyz", 980, 160, "Vec", Named("Vec")),
+            new("extrude", "extrude", 1220, 160, "Extrude", Named("Extrude"))
+        ],
+        [
+            new("xy_plane", "P", "rectangle", "P"),
+            new("width_slider", "N", "width_domain", "E"),
+            new("depth_slider", "N", "depth_domain", "E"),
+            new("width_domain", "I", "rectangle", "X"),
+            new("depth_domain", "I", "rectangle", "Y"),
+            new("rectangle", "R", "boundary_surfaces", "E"),
+            new("boundary_surfaces", "S", "extrude", "B"),
+            new("height_slider", "N", "vector_xyz", "Z"),
+            new("vector_xyz", "V", "extrude", "D")
+        ]);
 
-    private static readonly IReadOnlyList<SmokeGraphConnectionDefinition> SmokeConnections =
-    [
-        new("xy_plane", "P", "rectangle", "P"),
-        new("width_slider", "N", "width_domain", "E"),
-        new("depth_slider", "N", "depth_domain", "E"),
-        new("width_domain", "I", "rectangle", "X"),
-        new("depth_domain", "I", "rectangle", "Y"),
-        new("rectangle", "R", "boundary_surfaces", "E"),
-        new("boundary_surfaces", "S", "extrude", "B"),
-        new("height_slider", "N", "vector_xyz", "Z"),
-        new("vector_xyz", "V", "extrude", "D")
-    ];
+    private static readonly SmokeScenarioDefinition AbsoluteTowersScenario = new(
+        SmokeHarnessScenario.AbsoluteTowers,
+        "LiveCanvas Absolute Towers",
+        [
+            new("xy_plane", "xy_plane", 40, 320, "XY", Named("XY")),
+            new("base_width_slider", "number_slider", 40, 20, "Base Width", Slider(20, 60, 44)),
+            new("base_width_domain", "construct_domain", 260, 20, "Base Width Domain", Named("Base W")),
+            new("base_depth_slider", "number_slider", 40, 70, "Base Depth", Slider(16, 40, 30)),
+            new("base_depth_domain", "construct_domain", 260, 70, "Base Depth Domain", Named("Base D")),
+            new("base_radius_slider", "number_slider", 40, 120, "Base Radius", Slider(0, 16, 8)),
+            new("base_rect", "rectangle", 520, 70, "Base Floor", Named("Base Floor")),
+
+            new("level1_width_slider", "number_slider", 40, 220, "Level 1 Width", Slider(16, 50, 39)),
+            new("level1_width_domain", "construct_domain", 260, 220, "Level 1 Width Domain", Named("L1 W")),
+            new("level1_depth_slider", "number_slider", 40, 270, "Level 1 Depth", Slider(14, 36, 27)),
+            new("level1_depth_domain", "construct_domain", 260, 270, "Level 1 Depth Domain", Named("L1 D")),
+            new("level1_radius_slider", "number_slider", 40, 320, "Level 1 Radius", Slider(0, 16, 9)),
+            new("level1_rect", "rectangle", 520, 270, "Level 1 Floor", Named("Level 1")),
+            new("level1_height_slider", "number_slider", 760, 220, "Level 1 Height", Slider(10, 220, 55)),
+            new("level1_vector", "vector_xyz", 980, 220, "Level 1 Vec", Named("L1 Vec")),
+            new("level1_move", "move", 1220, 220, "Level 1 Move", Named("L1 Move")),
+            new("level1_angle_slider", "number_slider", 760, 270, "Level 1 Angle", Slider(0, 1.4, 0.32)),
+            new("level1_rotate", "rotate", 1460, 220, "Level 1 Rotate", Named("L1 Rotate")),
+
+            new("level2_width_slider", "number_slider", 40, 420, "Level 2 Width", Slider(12, 44, 33)),
+            new("level2_width_domain", "construct_domain", 260, 420, "Level 2 Width Domain", Named("L2 W")),
+            new("level2_depth_slider", "number_slider", 40, 470, "Level 2 Depth", Slider(10, 32, 23)),
+            new("level2_depth_domain", "construct_domain", 260, 470, "Level 2 Depth Domain", Named("L2 D")),
+            new("level2_radius_slider", "number_slider", 40, 520, "Level 2 Radius", Slider(0, 16, 9)),
+            new("level2_rect", "rectangle", 520, 470, "Level 2 Floor", Named("Level 2")),
+            new("level2_height_slider", "number_slider", 760, 420, "Level 2 Height", Slider(20, 260, 115)),
+            new("level2_vector", "vector_xyz", 980, 420, "Level 2 Vec", Named("L2 Vec")),
+            new("level2_move", "move", 1220, 420, "Level 2 Move", Named("L2 Move")),
+            new("level2_angle_slider", "number_slider", 760, 470, "Level 2 Angle", Slider(0, 1.8, 0.65)),
+            new("level2_rotate", "rotate", 1460, 420, "Level 2 Rotate", Named("L2 Rotate")),
+
+            new("level3_width_slider", "number_slider", 40, 620, "Level 3 Width", Slider(10, 36, 27)),
+            new("level3_width_domain", "construct_domain", 260, 620, "Level 3 Width Domain", Named("L3 W")),
+            new("level3_depth_slider", "number_slider", 40, 670, "Level 3 Depth", Slider(8, 28, 18)),
+            new("level3_depth_domain", "construct_domain", 260, 670, "Level 3 Depth Domain", Named("L3 D")),
+            new("level3_radius_slider", "number_slider", 40, 720, "Level 3 Radius", Slider(0, 16, 8)),
+            new("level3_rect", "rectangle", 520, 670, "Level 3 Floor", Named("Level 3")),
+            new("level3_height_slider", "number_slider", 760, 620, "Level 3 Height", Slider(30, 320, 180)),
+            new("level3_vector", "vector_xyz", 980, 620, "Level 3 Vec", Named("L3 Vec")),
+            new("level3_move", "move", 1220, 620, "Level 3 Move", Named("L3 Move")),
+            new("level3_angle_slider", "number_slider", 760, 670, "Level 3 Angle", Slider(0, 2.2, 0.95)),
+            new("level3_rotate", "rotate", 1460, 620, "Level 3 Rotate", Named("L3 Rotate")),
+
+            new("loft", "loft", 1700, 420, "Tower Loft", Named("Tower Loft")),
+            new("bounds", "bounding_box", 1940, 420, "Tower Bounds", Named("Tower Bounds"))
+        ],
+        [
+            new("xy_plane", "P", "base_rect", "P"),
+            new("base_width_slider", "N", "base_width_domain", "E"),
+            new("base_depth_slider", "N", "base_depth_domain", "E"),
+            new("base_width_domain", "I", "base_rect", "X"),
+            new("base_depth_domain", "I", "base_rect", "Y"),
+            new("base_radius_slider", "N", "base_rect", "R"),
+
+            new("xy_plane", "P", "level1_rect", "P"),
+            new("level1_width_slider", "N", "level1_width_domain", "E"),
+            new("level1_depth_slider", "N", "level1_depth_domain", "E"),
+            new("level1_width_domain", "I", "level1_rect", "X"),
+            new("level1_depth_domain", "I", "level1_rect", "Y"),
+            new("level1_radius_slider", "N", "level1_rect", "R"),
+            new("level1_rect", "R", "level1_move", "G"),
+            new("level1_height_slider", "N", "level1_vector", "Z"),
+            new("level1_vector", "V", "level1_move", "T"),
+            new("level1_move", "G", "level1_rotate", "G"),
+            new("level1_angle_slider", "N", "level1_rotate", "A"),
+            new("xy_plane", "P", "level1_rotate", "P"),
+
+            new("xy_plane", "P", "level2_rect", "P"),
+            new("level2_width_slider", "N", "level2_width_domain", "E"),
+            new("level2_depth_slider", "N", "level2_depth_domain", "E"),
+            new("level2_width_domain", "I", "level2_rect", "X"),
+            new("level2_depth_domain", "I", "level2_rect", "Y"),
+            new("level2_radius_slider", "N", "level2_rect", "R"),
+            new("level2_rect", "R", "level2_move", "G"),
+            new("level2_height_slider", "N", "level2_vector", "Z"),
+            new("level2_vector", "V", "level2_move", "T"),
+            new("level2_move", "G", "level2_rotate", "G"),
+            new("level2_angle_slider", "N", "level2_rotate", "A"),
+            new("xy_plane", "P", "level2_rotate", "P"),
+
+            new("xy_plane", "P", "level3_rect", "P"),
+            new("level3_width_slider", "N", "level3_width_domain", "E"),
+            new("level3_depth_slider", "N", "level3_depth_domain", "E"),
+            new("level3_width_domain", "I", "level3_rect", "X"),
+            new("level3_depth_domain", "I", "level3_rect", "Y"),
+            new("level3_radius_slider", "N", "level3_rect", "R"),
+            new("level3_rect", "R", "level3_move", "G"),
+            new("level3_height_slider", "N", "level3_vector", "Z"),
+            new("level3_vector", "V", "level3_move", "T"),
+            new("level3_move", "G", "level3_rotate", "G"),
+            new("level3_angle_slider", "N", "level3_rotate", "A"),
+            new("xy_plane", "P", "level3_rotate", "P"),
+
+            new("base_rect", "R", "loft", "C"),
+            new("level1_rotate", "G", "loft", "C"),
+            new("level2_rotate", "G", "loft", "C"),
+            new("level3_rotate", "G", "loft", "C"),
+            new("loft", "L", "bounds", "G")
+        ]);
 
     public async Task<SmokeHarnessResult> RunAsync(SmokeHarnessOptions options, CancellationToken cancellationToken = default)
     {
@@ -200,6 +305,7 @@ public sealed class SmokeHarnessRunner
         string bridgeUri,
         CancellationToken cancellationToken)
     {
+        var scenario = GetScenario(context.Options.Scenario);
         var processStartInfo = new ProcessStartInfo("dotnet", $"\"{agentHostDllPath}\"")
         {
             RedirectStandardInput = true,
@@ -254,16 +360,16 @@ public sealed class SmokeHarnessRunner
                 throw new SmokeHarnessFailureException("live_precondition_failed", "gh_session_info did not report a healthy session.");
             }
 
-            _ = await CallToolAsync(process, context, 4, "gh_new_document", new { name = "LiveCanvas Smoke" }, cancellationToken).ConfigureAwait(false);
+            _ = await CallToolAsync(process, context, 4, "gh_new_document", new { name = scenario.DocumentName }, cancellationToken).ConfigureAwait(false);
 
             var allowedComponentsJson = await CallToolAsync(process, context, 5, "gh_list_allowed_components", new { }, cancellationToken).ConfigureAwait(false);
             var allowedComponents = Deserialize<GhListAllowedComponentsResponse>(allowedComponentsJson);
-            ValidateAllowedComponents(allowedComponents);
+            ValidateAllowedComponents(scenario, allowedComponents);
 
             var componentIds = new Dictionary<string, string>(StringComparer.Ordinal);
             var requestId = 6;
 
-            foreach (var component in SmokeComponents)
+            foreach (var component in scenario.Components)
             {
                 var addResponseJson = await CallToolAsync(process, context, requestId++, "gh_add_component", new
                 {
@@ -284,7 +390,7 @@ public sealed class SmokeHarnessRunner
                 _ = await CallToolAsync(process, context, requestId++, "gh_configure_component", configPayload, cancellationToken).ConfigureAwait(false);
             }
 
-            foreach (var connection in SmokeConnections)
+            foreach (var connection in scenario.Connections)
             {
                 _ = await CallToolAsync(process, context, requestId++, "gh_connect", new
                 {
@@ -301,7 +407,7 @@ public sealed class SmokeHarnessRunner
                 include_runtime_messages = true
             }, cancellationToken).ConfigureAwait(false);
             var inspectBefore = Deserialize<GhInspectDocumentResponse>(inspectBeforeJson);
-            EnsureExpectedCounts(inspectBefore);
+            EnsureExpectedCounts(scenario, inspectBefore);
             RecordWarnings(context, inspectBefore.RuntimeMessages, "inspect_before_solve");
 
             var solveJson = await CallToolAsync(process, context, requestId++, "gh_solve", new { expire_all = true }, cancellationToken).ConfigureAwait(false);
@@ -318,28 +424,13 @@ public sealed class SmokeHarnessRunner
                 include_runtime_messages = true
             }, cancellationToken).ConfigureAwait(false);
             var inspectAfter = Deserialize<GhInspectDocumentResponse>(inspectAfterJson);
-            EnsureExpectedCounts(inspectAfter);
+            EnsureExpectedCounts(scenario, inspectAfter);
             RecordWarnings(context, inspectAfter.RuntimeMessages, "inspect_after_solve");
 
             if (!inspectAfter.PreviewSummary.HasGeometry || inspectAfter.PreviewSummary.PreviewObjectCount <= 0 || inspectAfter.BoundingBox is null)
             {
                 throw new SmokeHarnessFailureException("artifact_missing", "gh_inspect_document did not report geometry preview artifacts.");
             }
-
-            var captureJson = await CallToolAsync(process, context, requestId++, "gh_capture_preview", new
-            {
-                path = context.PreviewPath,
-                width = 640,
-                height = 360
-            }, cancellationToken).ConfigureAwait(false);
-            var capture = Deserialize<GhCapturePreviewResponse>(captureJson);
-            if (!capture.Captured)
-            {
-                throw new SmokeHarnessFailureException("artifact_missing", "gh_capture_preview did not report a captured image.");
-            }
-
-            EnsureArtifactExists(context.PreviewPath, "preview.png");
-            context.AddEvent("artifact", "filesystem", "preview_write", new { path = context.PreviewPath }, new { bytes = new FileInfo(context.PreviewPath).Length }, true);
 
             var saveJson = await CallToolAsync(process, context, requestId++, "gh_save_document", new
             {
@@ -351,8 +442,30 @@ public sealed class SmokeHarnessRunner
                 throw new SmokeHarnessFailureException("artifact_missing", "gh_save_document did not report a valid .gh save.");
             }
 
-            EnsureArtifactExists(context.GhPath, "smoke.gh");
+            EnsureArtifactExists(context.GhPath, Path.GetFileName(context.GhPath));
             context.AddEvent("artifact", "filesystem", "gh_write", new { path = context.GhPath }, new { bytes = new FileInfo(context.GhPath).Length }, true);
+
+            try
+            {
+                var captureJson = await CallToolAsync(process, context, requestId++, "gh_capture_preview", new
+                {
+                    path = context.PreviewPath,
+                    width = 640,
+                    height = 360
+                }, cancellationToken).ConfigureAwait(false);
+                var capture = Deserialize<GhCapturePreviewResponse>(captureJson);
+                if (!capture.Captured)
+                {
+                    throw new SmokeHarnessFailureException("artifact_missing", "gh_capture_preview did not report a captured image.");
+                }
+
+                EnsureArtifactExists(context.PreviewPath, "preview.png");
+                context.AddEvent("artifact", "filesystem", "preview_write", new { path = context.PreviewPath }, new { bytes = new FileInfo(context.PreviewPath).Length }, true);
+            }
+            catch (Exception ex) when (ShouldTreatCaptureFailureAsWarning(scenario, ex))
+            {
+                context.AddWarning($"capture_skipped: {ex.Message}");
+            }
         }
         finally
         {
@@ -369,8 +482,8 @@ public sealed class SmokeHarnessRunner
         }
 
         return context.SessionSummary is null
-            ? new GhSessionInfoResponse(true, null, "unknown", true, null, SmokeComponents.Count, "Meters", 0.01, "unknown")
-            : new GhSessionInfoResponse(true, context.SessionSummary.RhinoVersion, context.SessionSummary.Platform, true, null, SmokeComponents.Count, "Meters", 0.01, context.SessionSummary.ToolVersion);
+            ? new GhSessionInfoResponse(true, null, "unknown", true, null, scenario.Components.Count, "Meters", 0.01, "unknown")
+            : new GhSessionInfoResponse(true, context.SessionSummary.RhinoVersion, context.SessionSummary.Platform, true, null, scenario.Components.Count, "Meters", 0.01, context.SessionSummary.ToolVersion);
     }
 
     private static async Task<string> ResolveAgentHostDllPathAsync(HarnessRunContext context, CancellationToken cancellationToken)
@@ -391,10 +504,10 @@ public sealed class SmokeHarnessRunner
         return dllPath;
     }
 
-    private static void ValidateAllowedComponents(GhListAllowedComponentsResponse response)
+    private static void ValidateAllowedComponents(SmokeScenarioDefinition scenario, GhListAllowedComponentsResponse response)
     {
         var available = response.Components.Select(component => component.ComponentKey).ToHashSet(StringComparer.Ordinal);
-        var missing = SmokeComponents
+        var missing = scenario.Components
             .Select(component => component.ComponentKey)
             .Where(componentKey => !available.Contains(componentKey))
             .Distinct(StringComparer.Ordinal)
@@ -407,16 +520,16 @@ public sealed class SmokeHarnessRunner
         }
     }
 
-    private static void EnsureExpectedCounts(GhInspectDocumentResponse inspect)
+    private static void EnsureExpectedCounts(SmokeScenarioDefinition scenario, GhInspectDocumentResponse inspect)
     {
-        if (inspect.Components.Count != SmokeComponents.Count)
+        if (inspect.Components.Count != scenario.Components.Count)
         {
-            throw new SmokeHarnessFailureException("tool_call_failed", $"gh_inspect_document reported {inspect.Components.Count} components; expected {SmokeComponents.Count}.");
+            throw new SmokeHarnessFailureException("tool_call_failed", $"gh_inspect_document reported {inspect.Components.Count} components; expected {scenario.Components.Count}.");
         }
 
-        if (inspect.Connections.Count != SmokeConnections.Count)
+        if (inspect.Connections.Count != scenario.Connections.Count)
         {
-            throw new SmokeHarnessFailureException("tool_call_failed", $"gh_inspect_document reported {inspect.Connections.Count} connections; expected {SmokeConnections.Count}.");
+            throw new SmokeHarnessFailureException("tool_call_failed", $"gh_inspect_document reported {inspect.Connections.Count} connections; expected {scenario.Connections.Count}.");
         }
     }
 
@@ -445,6 +558,10 @@ public sealed class SmokeHarnessRunner
             throw new SmokeHarnessFailureException(category, message);
         }
     }
+
+    private static bool ShouldTreatCaptureFailureAsWarning(SmokeScenarioDefinition scenario, Exception exception) =>
+        scenario.Scenario == SmokeHarnessScenario.AbsoluteTowers
+        && exception.Message.Contains("No active Rhino document is available.", StringComparison.Ordinal);
 
     private static async Task BuildAgentHostAsync(string agentHostProjectPath, string configuration, CancellationToken cancellationToken)
     {
@@ -682,6 +799,7 @@ public sealed class SmokeHarnessRunner
 
         var manifest = new SmokeArtifactManifest(
             Mode: context.Options.Mode.ToString().ToLowerInvariant(),
+            Scenario: context.Options.Scenario.ToString(),
             BridgeUri: context.BridgeUri ?? string.Empty,
             OutputDirectory: context.OutputDirectory,
             PreviewPath: context.PreviewPath,
@@ -699,6 +817,20 @@ public sealed class SmokeHarnessRunner
         await File.WriteAllTextAsync(context.ManifestPath, manifestJson, cancellationToken).ConfigureAwait(false);
     }
 
+    private static SmokeScenarioDefinition GetScenario(SmokeHarnessScenario scenario) =>
+        scenario switch
+        {
+            SmokeHarnessScenario.Smoke => SmokeScenario,
+            SmokeHarnessScenario.AbsoluteTowers => AbsoluteTowersScenario,
+            _ => throw new SmokeHarnessFailureException("cli_usage", $"Unsupported smoke harness scenario '{scenario}'.")
+        };
+
+    private static GhComponentConfig Slider(double min, double max, double value, bool integer = false) =>
+        new(Slider: new SliderConfig(min, max, value, integer));
+
+    private static GhComponentConfig Named(string nickname) =>
+        new(Nickname: nickname);
+
     private sealed record SmokeGraphComponentDefinition(
         string Alias,
         string ComponentKey,
@@ -712,4 +844,10 @@ public sealed class SmokeHarnessRunner
         string SourceOutput,
         string TargetAlias,
         string TargetInput);
+
+    private sealed record SmokeScenarioDefinition(
+        SmokeHarnessScenario Scenario,
+        string DocumentName,
+        IReadOnlyList<SmokeGraphComponentDefinition> Components,
+        IReadOnlyList<SmokeGraphConnectionDefinition> Connections);
 }

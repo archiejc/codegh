@@ -61,6 +61,12 @@ Or use the provided helper:
 scripts/build-rhino-plugin-mac.sh Debug
 ```
 
+To build just the MCP stdio server that a coding agent will talk to:
+
+```bash
+/Users/jiachenboo/.dotnet/dotnet build src/LiveCanvas.AgentHost/LiveCanvas.AgentHost.csproj -c Debug -v minimal
+```
+
 ## Deploy plugin to Rhino MacPlugIns
 
 Build first, then deploy `net7.0` plugin output into both plugin directories:
@@ -117,6 +123,104 @@ If Rhino and Grasshopper are already open:
 ```bash
 scripts/dev-smoke-mac.sh --skip-open --timeout-seconds 30
 ```
+
+## Use from a coding agent / IDE
+
+The repo-side architecture is already set up for an MCP-capable coding agent:
+
+```text
+Coding agent / IDE
+  -> stdio MCP server
+  -> scripts/run-agenthost-mac.sh
+  -> LiveCanvas.AgentHost
+  -> LiveCanvas.RhinoPlugin bridge
+  -> live Grasshopper / Rhino updates
+```
+
+Start by making sure Rhino 8 is running, the plugin is deployed, and Grasshopper is open.
+
+Then register this command as an MCP stdio server in your coding agent / IDE:
+
+```bash
+/Users/jiachenboo/Research/codegh/scripts/run-agenthost-mac.sh --skip-build
+```
+
+If you want the launcher to rebuild `LiveCanvas.AgentHost` automatically before startup:
+
+```bash
+/Users/jiachenboo/Research/codegh/scripts/run-agenthost-mac.sh
+```
+
+If your client needs an explicit bridge URI:
+
+```bash
+/Users/jiachenboo/Research/codegh/scripts/run-agenthost-mac.sh --skip-build --bridge-uri ws://127.0.0.1:17881/livecanvas/v0
+```
+
+Exact local client snippets on this machine:
+
+Codex (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.livecanvas]
+command = "/bin/bash"
+args = ["/Users/jiachenboo/Research/codegh/scripts/run-agenthost-mac.sh", "--skip-build"]
+```
+
+Claude Code (`~/.claude.json` inside top-level `mcpServers`):
+
+```json
+"livecanvas": {
+  "command": "/bin/bash",
+  "args": [
+    "/Users/jiachenboo/Research/codegh/scripts/run-agenthost-mac.sh",
+    "--skip-build"
+  ],
+  "env": {},
+  "type": "stdio"
+}
+```
+
+After adding the MCP server entry, restart the client so it reloads the MCP server list.
+
+Once connected, the coding agent can call the exposed `gh_*` tools to:
+- inspect session state
+- create a Grasshopper document
+- add and configure components
+- connect, solve, inspect, capture, and save
+
+If you tell me which host you want to use first, I can give you the exact MCP config snippet for that client.
+
+## Run a modeling validation scene
+
+To prove the live MCP path is doing more than the baseline extrusion smoke test, the repo also includes an Absolute Towers / "Marilyn Monroe towers" style demo scene.
+
+With Rhino 8 running, an active Rhino document open, and Grasshopper visible:
+
+```bash
+bash scripts/demo-absolute-towers-mac.sh --timeout-seconds 30
+```
+
+This drives the same `LiveCanvas.AgentHost` MCP tool surface and builds a twisting rounded-floor-plate tower by:
+- creating several rounded rectangle floor profiles
+- moving them upward at increasing heights
+- rotating upper floors around the world Z axis
+- lofting the profiles into a single tapered tower mass
+
+Expected stdout includes:
+- `[ok] bridge-jsonrpc-live`
+- `[ok] mcp-stdio-live`
+- `output_dir=...`
+
+Inside the printed `output_dir`, look for:
+- `absolute-towers.gh`
+- `manifest.json`
+- `transcript.json`
+
+If Rhino currently exposes an active document and viewport, the run will also write:
+- `preview.png`
+
+If Rhino drops the active document during automated capture, the harness still treats the modeling run as successful, saves `absolute-towers.gh`, and records a `capture_skipped` warning in `manifest.json`.
 
 ## Expected success signals
 
@@ -179,6 +283,8 @@ Example on this machine:
 
 - `scripts/build-rhino-plugin-mac.sh [Debug|Release]`
 - `scripts/deploy-rhino-plugin-mac.sh [Debug|Release]`
+- `scripts/run-agenthost-mac.sh [--configuration Debug|Release] [--skip-build] [--bridge-uri ws://...]`
+- `scripts/demo-absolute-towers-mac.sh [--timeout-seconds N] [--output-dir PATH] [--skip-build-agent-host]`
 - `scripts/open-rhino-grasshopper-mac.sh`
 - `scripts/live-smoke-mac.sh [--bridge-only|--mcp-only] [--timeout-seconds N] [--output-dir PATH] [--bridge-uri ws://...]`
 - `scripts/dev-smoke-mac.sh [--skip-open] [--timeout-seconds N] [--configuration Debug|Release]`
