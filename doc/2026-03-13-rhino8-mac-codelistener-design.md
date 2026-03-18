@@ -6,7 +6,9 @@ Scope: Rhino 8 for Mac only
 
 ## 1. Summary
 
-This document defines a replacement for the Windows-only `CodeListener` plugin so that local tools, VS Code, and the existing `GH_mcp_server` can drive Rhino 8 for Mac and Grasshopper in a live coding workflow.
+This document defines a replacement for the Windows-only `CodeListener` plugin so that local tools, VS Code, and legacy MCP workflows could drive Rhino 8 for Mac and Grasshopper in a live coding workflow.
+
+Historical note: this design document references a legacy Python MCP server path (`mcps/GH_mcp_server`) that is not the active runtime entrypoint in the current repository state. The current MCP host entrypoint is `src/LiveCanvas.AgentHost`.
 
 The replacement will not attempt to install or adapt the existing `codelistener.rhi` package. Local inspection of `/Users/jiachenbu/Research/codegh/codelistener.rhi` shows that the packaged `CodeListener.rhp` is a Windows PE32 .NET assembly targeting `.NETFramework,Version=v4.5` and referencing `PresentationFramework` and `System.Windows`, which makes direct use on Rhino 8 for Mac impractical.
 
@@ -20,7 +22,7 @@ Instead, the project will build a new RhinoCommon plugin for Rhino 8 for Mac tha
 
 ## 2. Problem Statement
 
-The current repository contains a Python MCP server under `/Users/jiachenbu/Research/codegh/mcps/GH_mcp_server`. That MCP currently assumes a local Rhino-side listener exists. In `/Users/jiachenbu/Research/codegh/mcps/GH_mcp_server/grasshopper_mcp/rhino/connection.py`, the current flow is:
+At design time, the repository contained a Python MCP server under `/Users/jiachenbu/Research/codegh/mcps/GH_mcp_server`. That historical MCP assumed a local Rhino-side listener existed. In `/Users/jiachenbu/Research/codegh/mcps/GH_mcp_server/grasshopper_mcp/rhino/connection.py`, the flow was:
 
 1. Write Python code to a temporary `.py` file
 2. Open a TCP connection to `127.0.0.1:614`
