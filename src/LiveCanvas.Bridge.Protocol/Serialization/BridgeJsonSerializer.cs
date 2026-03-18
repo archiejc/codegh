@@ -31,6 +31,14 @@ public static class BridgeJsonSerializer
         return JsonSerializer.Serialize(new JsonRpcResponseEnvelope("2.0", id, result, null), DefaultOptions);
     }
 
+    public static string SerializeResponse(string id, object payload)
+    {
+        ArgumentNullException.ThrowIfNull(payload);
+
+        var result = JsonSerializer.SerializeToElement(payload, payload.GetType(), DefaultOptions);
+        return JsonSerializer.Serialize(new JsonRpcResponseEnvelope("2.0", id, result, null), DefaultOptions);
+    }
+
     public static string SerializeError(string id, string code, string message) =>
         JsonSerializer.Serialize(new JsonRpcResponseEnvelope("2.0", id, null, new BridgeError(code, message)), DefaultOptions);
 

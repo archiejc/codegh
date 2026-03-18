@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>LiveCanvas.SmokeHarness</RootNamespace>
+    <AssemblyName>LiveCanvas.SmokeHarness</AssemblyName>
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\LiveCanvas.Contracts\LiveCanvas.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\LiveCanvas.Core\LiveCanvas.Core.csproj" />
+    <ProjectReference Include="..\..\src\LiveCanvas.Bridge.Protocol\LiveCanvas.Bridge.Protocol.csproj" />
+  </ItemGroup>
+</Project>
