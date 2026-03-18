@@ -8,6 +8,7 @@ using LiveCanvas.Contracts.Documents;
 using LiveCanvas.Contracts.Session;
 using LiveCanvas.Core.AllowedComponents;
 using LiveCanvas.Core.Validation;
+using LiveCanvas.RhinoPlugin.Diagnostics;
 using Rhino;
 using Rhino.Display;
 using Rhino.Geometry;
@@ -20,6 +21,7 @@ public sealed class LiveCanvasRuntime
     private readonly AllowedComponentRegistry allowedComponentRegistry;
     private readonly ComponentConfigValidator componentConfigValidator;
     private readonly ConnectionValidator connectionValidator;
+    private readonly Dictionary<string, Guid> builtinProxyIdsByComponentKey = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> componentKeysById = new(StringComparer.Ordinal);
     private readonly List<StoredConnection> connections = [];
     private GH_Document? ownedDocument;
@@ -36,19 +38,25 @@ public sealed class LiveCanvasRuntime
 
     public GhSessionInfoResponse GetSessionInfo()
     {
+        LiveCanvasLog.Write("runtime gh_session_info start");
         var activeRhinoDocument = RhinoDoc.ActiveDoc;
-        var activeGrasshopperDocument = ownedDocument ?? Instances.ActiveCanvas?.Document;
+        var activeGrasshopperDocument = TryGetGrasshopperDocument();
+        var grasshopperLoaded = IsGrasshopperAvailable();
+        LiveCanvasLog.Write($"runtime gh_session_info snapshot rhinoDoc={(activeRhinoDocument is not null)} ghDoc={(activeGrasshopperDocument is not null)} ghLoaded={grasshopperLoaded}");
 
-        return new GhSessionInfoResponse(
+        var response = new GhSessionInfoResponse(
             RhinoRunning: true,
             RhinoVersion: RhinoApp.Version.ToString(),
             Platform: GetPlatformName(),
-            GrasshopperLoaded: IsGrasshopperAvailable(),
+            GrasshopperLoaded: grasshopperLoaded,
             ActiveDocumentName: activeGrasshopperDocument?.DisplayName,
             DocumentObjectCount: activeGrasshopperDocument?.ObjectCount ?? 0,
             Units: activeRhinoDocument?.ModelUnitSystem.ToString() ?? "Meters",
             ModelTolerance: activeRhinoDocument?.ModelAbsoluteTolerance ?? 0.01,
             ToolVersion: "0.1.0");
+
+        LiveCanvasLog.Write("runtime gh_session_info end");
+        return response;
     }
 
     public GhNewDocumentResponse NewDocument(GhNewDocumentRequest request)
@@ -202,7 +210,7 @@ public sealed class LiveCanvasRuntime
             .ThenBy(component => component.Y)
             .ToArray();
 
-        var bounds = document.PreviewBoundingBox;
+        var previewState = InspectPreviewState(document);
 
         return new GhInspectDocumentResponse(
             DocumentId: document.DocumentID.ToString("N"),
@@ -211,12 +219,12 @@ public sealed class LiveCanvasRuntime
                 ? connections.Select(connection => new GhDocumentConnectionSnapshot(connection.SourceId, connection.SourceOutput, connection.TargetId, connection.TargetInput)).ToArray()
                 : Array.Empty<GhDocumentConnectionSnapshot>(),
             RuntimeMessages: request.IncludeRuntimeMessages ? CollectRuntimeMessages(document) : Array.Empty<GhRuntimeMessage>(),
-            BoundingBox: bounds.IsValid
-                ? new GhBounds(bounds.Min.X, bounds.Min.Y, bounds.Min.Z, bounds.Max.X, bounds.Max.Y, bounds.Max.Z)
+            BoundingBox: previewState.Bounds.IsValid
+                ? new GhBounds(previewState.Bounds.Min.X, previewState.Bounds.Min.Y, previewState.Bounds.Min.Z, previewState.Bounds.Max.X, previewState.Bounds.Max.Y, previewState.Bounds.Max.Z)
                 : null,
             PreviewSummary: new GhPreviewSummary(
-                HasGeometry: bounds.IsValid,
-                PreviewObjectCount: document.Objects.OfType<IGH_PreviewObject>().Count(preview => preview.IsPreviewCapable && !preview.Hidden)));
+                HasGeometry: previewState.Bounds.IsValid,
+                PreviewObjectCount: previewState.PreviewObjectCount));
     }
 
     public GhCapturePreviewResponse CapturePreview(GhCapturePreviewRequest request)
@@ -290,8 +298,19 @@ public sealed class LiveCanvasRuntime
         return "unknown";
     }
 
-    private static bool IsGrasshopperAvailable() =>
-        PlugIn.LoadPlugIn(Instances.GrasshopperPluginId, loadQuietly: true, forceLoad: false);
+    private GH_Document? TryGetGrasshopperDocument()
+    {
+        if (ownedDocument is not null)
+        {
+            return ownedDocument;
+        }
+
+        return Instances.ActiveCanvas?.Document;
+    }
+
+    private bool IsGrasshopperAvailable() =>
+        TryGetGrasshopperDocument() is not null
+        || RhinoApp.GetPlugInObject(Instances.GrasshopperPluginId) is not null;
 
     private static void EnsureGrasshopperEditorLoaded()
     {
@@ -360,11 +379,55 @@ public sealed class LiveCanvasRuntime
     private IGH_DocumentObject EmitBuiltinObject(string componentKey)
     {
         var definition = allowedComponentRegistry.GetRequired(componentKey);
-        var proxy = Instances.ComponentServer.FindObjectByName(definition.DisplayName, true, true)
-            ?? throw new InvalidOperationException($"Grasshopper could not resolve builtin component '{definition.DisplayName}'.");
+        if (builtinProxyIdsByComponentKey.TryGetValue(componentKey, out var cachedProxyId))
+        {
+            var cachedObject = Instances.ComponentServer.EmitObject(cachedProxyId);
+            if (cachedObject is not null)
+            {
+                return cachedObject;
+            }
+        }
 
-        return Instances.ComponentServer.EmitObject(proxy.Guid)
-            ?? throw new InvalidOperationException($"Grasshopper could not emit builtin component '{definition.DisplayName}'.");
+        IGH_DocumentObject? bestObject = null;
+        Guid bestProxyId = Guid.Empty;
+        var bestScore = int.MinValue;
+
+        foreach (var proxy in Instances.ComponentServer.ObjectProxies.Where(proxy => !proxy.Obsolete))
+        {
+            IGH_DocumentObject? emitted;
+            try
+            {
+                emitted = Instances.ComponentServer.EmitObject(proxy.Guid);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (emitted is null)
+            {
+                continue;
+            }
+
+            var score = ScoreProxyMatch(componentKey, proxy.Desc.Name, emitted, definition);
+            if (score <= bestScore)
+            {
+                continue;
+            }
+
+            bestScore = score;
+            bestProxyId = proxy.Guid;
+            bestObject = emitted;
+        }
+
+        if (bestObject is null || bestScore <= 0)
+        {
+            throw new InvalidOperationException($"Grasshopper could not resolve builtin component '{definition.DisplayName}'.");
+        }
+
+        builtinProxyIdsByComponentKey[componentKey] = bestProxyId;
+        LiveCanvasLog.Write($"runtime resolved componentKey={componentKey} displayName={definition.DisplayName} proxy={bestProxyId} score={bestScore} type={bestObject.GetType().FullName}");
+        return bestObject;
     }
 
     private IGH_DocumentObject ResolveOwnedObject(string componentId)
@@ -399,6 +462,106 @@ public sealed class LiveCanvasRuntime
             IGH_Param parameter when portDefinition.Index == 0 => parameter,
             _ => throw new InvalidOperationException($"Component '{componentId}' does not expose the requested port layout.")
         };
+    }
+
+    private static bool MatchesPortLayout(IGH_DocumentObject docObject, AllowedComponentDefinition definition) =>
+        docObject switch
+        {
+            IGH_Component component => PortsMatch(component.Params.Input, definition.Inputs)
+                && PortsMatch(component.Params.Output, definition.Outputs),
+            IGH_Param _ => definition.Inputs.Count <= 1 && definition.Outputs.Count <= 1,
+            _ => false
+        };
+
+    private static int ScoreProxyMatch(string componentKey, string proxyName, IGH_DocumentObject docObject, AllowedComponentDefinition definition)
+    {
+        var exactNameBonus = string.Equals(proxyName, definition.DisplayName, StringComparison.OrdinalIgnoreCase) ? 50 : 0;
+        var strongNameOrTypeMatch = IsStrongNameOrTypeMatch(componentKey, definition.DisplayName, proxyName, docObject);
+
+        if (!MatchesPortLayout(docObject, definition))
+        {
+            return strongNameOrTypeMatch && HasRequiredPortCapacity(docObject, definition)
+                ? 75 + exactNameBonus
+                : 0;
+        }
+
+        return docObject switch
+        {
+            IGH_Component => 100 + exactNameBonus + (strongNameOrTypeMatch ? 25 : 0),
+            IGH_Param => 10 + exactNameBonus + (strongNameOrTypeMatch ? 5 : 0),
+            _ => 0
+        };
+    }
+
+    private static bool PortsMatch(IReadOnlyList<IGH_Param> actualPorts, IReadOnlyList<AllowedComponentPortInfo> expectedPorts)
+    {
+        for (var index = 0; index < expectedPorts.Count; index++)
+        {
+            var expectedPort = expectedPorts[index];
+            if (expectedPort.Index < 0 || expectedPort.Index >= actualPorts.Count)
+            {
+                return false;
+            }
+
+            var actualPort = actualPorts[expectedPort.Index];
+            var actualName = actualPort.NickName;
+            if (!string.Equals(actualName, expectedPort.Name, StringComparison.Ordinal)
+                && !string.Equals(actualPort.Name, expectedPort.Name, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool HasRequiredPortCapacity(IGH_DocumentObject docObject, AllowedComponentDefinition definition) =>
+        docObject switch
+        {
+            IGH_Component component => component.Params.Input.Count >= definition.Inputs.Count
+                && component.Params.Output.Count >= definition.Outputs.Count,
+            IGH_Param _ => definition.Inputs.Count <= 1 && definition.Outputs.Count <= 1,
+            _ => false
+        };
+
+    private static bool IsStrongNameOrTypeMatch(
+        string componentKey,
+        string displayName,
+        string proxyName,
+        IGH_DocumentObject docObject)
+    {
+        var normalizedKey = NormalizeLookupToken(componentKey);
+        if (normalizedKey.Length == 0)
+        {
+            return false;
+        }
+
+        return MatchesLookupToken(normalizedKey, displayName)
+            || MatchesLookupToken(normalizedKey, proxyName)
+            || MatchesLookupToken(normalizedKey, docObject.Name)
+            || MatchesLookupToken(normalizedKey, docObject.NickName)
+            || MatchesLookupToken(normalizedKey, docObject.GetType().Name)
+            || MatchesLookupToken(normalizedKey, docObject.GetType().FullName);
+    }
+
+    private static bool MatchesLookupToken(string normalizedKey, string? candidate) =>
+        !string.IsNullOrWhiteSpace(candidate)
+        && NormalizeLookupToken(candidate).Contains(normalizedKey, StringComparison.Ordinal);
+
+    private static string NormalizeLookupToken(string value)
+    {
+        Span<char> buffer = stackalloc char[value.Length];
+        var length = 0;
+
+        foreach (var ch in value)
+        {
+            if (char.IsLetterOrDigit(ch))
+            {
+                buffer[length++] = char.ToLowerInvariant(ch);
+            }
+        }
+
+        return length == 0 ? string.Empty : new string(buffer[..length]);
     }
 
     private static void ConfigureSlider(GH_NumberSlider slider, SliderConfig sliderConfig)
@@ -490,10 +653,60 @@ public sealed class LiveCanvasRuntime
         }
     }
 
+    private static PreviewInspectionState InspectPreviewState(GH_Document document)
+    {
+        var previewObjects = document.Objects
+            .OfType<IGH_PreviewObject>()
+            .Where(preview => preview.IsPreviewCapable && !preview.Hidden)
+            .ToArray();
+
+        var bounds = BoundingBox.Unset;
+        foreach (var preview in previewObjects)
+        {
+            try
+            {
+                var clippingBox = preview.ClippingBox;
+                var label = preview is IGH_DocumentObject docObject
+                    ? $"{docObject.Name} ({docObject.InstanceGuid:N})"
+                    : preview.GetType().FullName ?? preview.GetType().Name;
+
+                LiveCanvasLog.Write($"runtime inspect preview label={label} valid={clippingBox.IsValid} min={FormatPoint(clippingBox.Min)} max={FormatPoint(clippingBox.Max)}");
+
+                if (!clippingBox.IsValid)
+                {
+                    continue;
+                }
+
+                if (!bounds.IsValid)
+                {
+                    bounds = clippingBox;
+                    continue;
+                }
+
+                bounds.Union(clippingBox);
+            }
+            catch (Exception ex)
+            {
+                LiveCanvasLog.Write($"runtime inspect preview failed for {preview.GetType().FullName}: {ex}");
+            }
+        }
+
+        return new PreviewInspectionState(bounds, previewObjects.Length);
+    }
+
+    private static string FormatPoint(Point3d point) =>
+        point.IsValid
+            ? $"{point.X:0.###},{point.Y:0.###},{point.Z:0.###}"
+            : "invalid";
+
     private sealed record StoredConnection(
         string ConnectionId,
         string SourceId,
         string SourceOutput,
         string TargetId,
         string TargetInput);
+
+    private sealed record PreviewInspectionState(
+        BoundingBox Bounds,
+        int PreviewObjectCount);
 }
