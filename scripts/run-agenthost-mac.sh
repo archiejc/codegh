@@ -3,10 +3,33 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-DOTNET_BIN="${DOTNET_BIN:-/Users/jiachenboo/.dotnet/dotnet}"
 CONFIGURATION="Debug"
 SKIP_BUILD=0
 BRIDGE_URI="${LIVECANVAS_BRIDGE_URI:-ws://127.0.0.1:17881/livecanvas/v0}"
+
+resolve_dotnet() {
+  if [[ -n "${DOTNET_BIN:-}" ]]; then
+    if [[ -x "${DOTNET_BIN}" ]]; then
+      echo "${DOTNET_BIN}"
+      return
+    fi
+    echo "DOTNET_BIN is set but not executable: '${DOTNET_BIN}'." >&2
+    exit 2
+  fi
+
+  if [[ -x "${HOME}/.dotnet/dotnet" ]]; then
+    echo "${HOME}/.dotnet/dotnet"
+    return
+  fi
+
+  if command -v dotnet >/dev/null 2>&1; then
+    command -v dotnet
+    return
+  fi
+
+  echo "dotnet executable not found. Set DOTNET_BIN or install dotnet into PATH." >&2
+  exit 2
+}
 
 usage() {
   cat <<'EOF'
@@ -55,10 +78,7 @@ if [[ "${CONFIGURATION}" != "Debug" && "${CONFIGURATION}" != "Release" ]]; then
   exit 2
 fi
 
-if [[ ! -x "${DOTNET_BIN}" ]]; then
-  echo "dotnet executable not found at '${DOTNET_BIN}'." >&2
-  exit 2
-fi
+DOTNET_BIN="$(resolve_dotnet)"
 
 if [[ ! "${BRIDGE_URI}" =~ ^ws:// ]]; then
   echo "Unsupported bridge URI '${BRIDGE_URI}'. Expected a ws:// URI." >&2

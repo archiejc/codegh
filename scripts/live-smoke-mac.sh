@@ -3,12 +3,35 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-DOTNET_BIN="${DOTNET_BIN:-/Users/jiachenboo/.dotnet/dotnet}"
 CONFIGURATION="Debug"
 TIMEOUT_SECONDS="30"
 CHECK_MODE=""
 OUTPUT_DIR=""
 BRIDGE_URI=""
+
+resolve_dotnet() {
+  if [[ -n "${DOTNET_BIN:-}" ]]; then
+    if [[ -x "${DOTNET_BIN}" ]]; then
+      echo "${DOTNET_BIN}"
+      return
+    fi
+    echo "DOTNET_BIN is set but not executable: '${DOTNET_BIN}'." >&2
+    exit 2
+  fi
+
+  if [[ -x "${HOME}/.dotnet/dotnet" ]]; then
+    echo "${HOME}/.dotnet/dotnet"
+    return
+  fi
+
+  if command -v dotnet >/dev/null 2>&1; then
+    command -v dotnet
+    return
+  fi
+
+  echo "dotnet executable not found. Set DOTNET_BIN or install dotnet into PATH." >&2
+  exit 2
+}
 
 usage() {
   cat <<'EOF'
@@ -74,10 +97,7 @@ if [[ ! "${TIMEOUT_SECONDS}" =~ ^[1-9][0-9]*$ ]]; then
   exit 2
 fi
 
-if [[ ! -x "${DOTNET_BIN}" ]]; then
-  echo "dotnet executable not found at '${DOTNET_BIN}'." >&2
-  exit 2
-fi
+DOTNET_BIN="$(resolve_dotnet)"
 
 CMD=(
   "${DOTNET_BIN}" run

@@ -49,6 +49,15 @@ public class SmokeHarnessCliTests
     }
 
     [Fact]
+    public void parse_rejects_invalid_flag_combinations_in_reverse_order()
+    {
+        var act = () => SmokeHarnessCli.Parse(["--mcp-only", "--bridge-only"]);
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*cannot be combined*");
+    }
+
+    [Fact]
     public void parse_rejects_mock_bridge_uri()
     {
         var act = () => SmokeHarnessCli.Parse(["--bridge-uri", "ws://127.0.0.1:17881/livecanvas/v0"]);

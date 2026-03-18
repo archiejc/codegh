@@ -72,7 +72,7 @@ public sealed class LiveCanvasBridgeServer : IDisposable
                 break;
             }
 
-            await HandleContextAsync(context, cancellationToken);
+            _ = Task.Run(() => HandleContextAsync(context, cancellationToken), cancellationToken);
         }
     }
 

@@ -462,7 +462,7 @@ public sealed class SmokeHarnessRunner
                 EnsureArtifactExists(context.PreviewPath, "preview.png");
                 context.AddEvent("artifact", "filesystem", "preview_write", new { path = context.PreviewPath }, new { bytes = new FileInfo(context.PreviewPath).Length }, true);
             }
-            catch (Exception ex) when (ShouldTreatCaptureFailureAsWarning(scenario, ex))
+            catch (Exception ex) when (ShouldTreatCaptureFailureAsWarning(ex))
             {
                 context.AddWarning($"capture_skipped: {ex.Message}");
             }
@@ -559,9 +559,9 @@ public sealed class SmokeHarnessRunner
         }
     }
 
-    private static bool ShouldTreatCaptureFailureAsWarning(SmokeScenarioDefinition scenario, Exception exception) =>
-        scenario.Scenario == SmokeHarnessScenario.AbsoluteTowers
-        && exception.Message.Contains("No active Rhino document is available.", StringComparison.Ordinal);
+    private static bool ShouldTreatCaptureFailureAsWarning(Exception exception) =>
+        exception.Message.Contains("No active Rhino document is available.", StringComparison.Ordinal)
+        || exception.Message.Contains("No active Rhino view is available for preview capture.", StringComparison.Ordinal);
 
     private static async Task BuildAgentHostAsync(string agentHostProjectPath, string configuration, CancellationToken cancellationToken)
     {

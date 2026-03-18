@@ -43,7 +43,7 @@ internal static class SmokeHarnessCli
                     configuration = ParseConfiguration(RequireValue(args, ref i, "--configuration"));
                     break;
                 case "--bridge-only":
-                    if (!runMcpCheck)
+                    if (!runBridgeDirectCheck || !runMcpCheck)
                     {
                         throw new ArgumentException("--bridge-only cannot be combined with --mcp-only.");
                     }
@@ -52,7 +52,7 @@ internal static class SmokeHarnessCli
                     runMcpCheck = false;
                     break;
                 case "--mcp-only":
-                    if (!runMcpCheck)
+                    if (!runBridgeDirectCheck || !runMcpCheck)
                     {
                         throw new ArgumentException("--mcp-only cannot be combined with --bridge-only.");
                     }

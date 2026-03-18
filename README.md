@@ -41,7 +41,7 @@ Agent / CLI
 
 - Rhino 8 installed at `/Applications/Rhino 8.app`
 - Grasshopper available in Rhino
-- .NET SDK executable at `/Users/jiachenboo/.dotnet/dotnet`
+- .NET SDK available either in `PATH` as `dotnet` or at `~/.dotnet/dotnet`
 - Terminal has Accessibility permission if you want scripted UI keystrokes (for opening new document + Grasshopper)
 
 Optional but recommended:
@@ -52,7 +52,7 @@ Optional but recommended:
 From repo root:
 
 ```bash
-/Users/jiachenboo/.dotnet/dotnet build LiveCanvas.sln -v minimal
+dotnet build LiveCanvas.sln -v minimal
 ```
 
 Or use the provided helper:
@@ -64,7 +64,7 @@ scripts/build-rhino-plugin-mac.sh Debug
 To build just the MCP stdio server that a coding agent will talk to:
 
 ```bash
-/Users/jiachenboo/.dotnet/dotnet build src/LiveCanvas.AgentHost/LiveCanvas.AgentHost.csproj -c Debug -v minimal
+dotnet build src/LiveCanvas.AgentHost/LiveCanvas.AgentHost.csproj -c Debug -v minimal
 ```
 
 ## Deploy plugin to Rhino MacPlugIns
@@ -109,7 +109,7 @@ scripts/live-smoke-mac.sh --timeout-seconds 30
 Direct command without helper script:
 
 ```bash
-/Users/jiachenboo/.dotnet/dotnet run --project tools/LiveCanvas.SmokeHarness/LiveCanvas.SmokeHarness.csproj -- --mode live --live-preflight-timeout-seconds 30
+dotnet run --project tools/LiveCanvas.SmokeHarness/LiveCanvas.SmokeHarness.csproj -- --mode live --live-preflight-timeout-seconds 30
 ```
 
 One-shot dev flow (build + deploy + open + bridge-only + full):
@@ -123,6 +123,33 @@ If Rhino and Grasshopper are already open:
 ```bash
 scripts/dev-smoke-mac.sh --skip-open --timeout-seconds 30
 ```
+
+## Quick Install On Another Mac
+
+After cloning this repository, you can build, deploy, and register the MCP server for Codex and Claude Code with one command:
+
+```bash
+bash scripts/install-mcp-livecanvas-mac.sh --target both
+```
+
+If you only want to register one client:
+
+```bash
+bash scripts/install-mcp-livecanvas-mac.sh --target codex
+bash scripts/install-mcp-livecanvas-mac.sh --target claude
+```
+
+What this does:
+- builds the Rhino plugin, AgentHost, and smoke harness
+- deploys the Rhino plugin into Rhino 8 MacPlugIns
+- writes a `livecanvas` MCP stdio entry into the selected client config file
+
+After the install script finishes:
+1. Restart Codex Desktop and/or Claude Code.
+2. Open Rhino 8.
+3. Create a Rhino document.
+4. Open Grasshopper.
+5. Ask the client to call `gh_session_info`.
 
 ## Use from a coding agent / IDE
 
@@ -220,7 +247,7 @@ Inside the printed `output_dir`, look for:
 If Rhino currently exposes an active document and viewport, the run will also write:
 - `preview.png`
 
-If Rhino drops the active document during automated capture, the harness still treats the modeling run as successful, saves `absolute-towers.gh`, and records a `capture_skipped` warning in `manifest.json`.
+If Rhino drops the active document or active view during automated capture, the harness still treats the modeling run as successful, saves the `.gh` file, and records a `capture_skipped` warning in `manifest.json`.
 
 ## Expected success signals
 
@@ -232,8 +259,10 @@ For full live smoke, expected stdout includes:
 In the printed `output_dir`, expected artifacts:
 - `manifest.json`
 - `transcript.json`
-- `preview.png`
 - `smoke.gh`
+
+If Rhino keeps an active document and viewport during capture, the output directory also includes:
+- `preview.png`
 
 `manifest.json` should include:
 - `"success": true`
@@ -283,6 +312,7 @@ Example on this machine:
 
 - `scripts/build-rhino-plugin-mac.sh [Debug|Release]`
 - `scripts/deploy-rhino-plugin-mac.sh [Debug|Release]`
+- `scripts/install-mcp-livecanvas-mac.sh [--target codex|claude|both] [--configuration Debug|Release] [--skip-build-deploy]`
 - `scripts/run-agenthost-mac.sh [--configuration Debug|Release] [--skip-build] [--bridge-uri ws://...]`
 - `scripts/demo-absolute-towers-mac.sh [--timeout-seconds N] [--output-dir PATH] [--skip-build-agent-host]`
 - `scripts/open-rhino-grasshopper-mac.sh`

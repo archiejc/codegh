@@ -477,10 +477,14 @@ public sealed class LiveCanvasRuntime
     {
         var exactNameBonus = string.Equals(proxyName, definition.DisplayName, StringComparison.OrdinalIgnoreCase) ? 50 : 0;
         var strongNameOrTypeMatch = IsStrongNameOrTypeMatch(componentKey, definition.DisplayName, proxyName, docObject);
+        if (!strongNameOrTypeMatch)
+        {
+            return 0;
+        }
 
         if (!MatchesPortLayout(docObject, definition))
         {
-            return strongNameOrTypeMatch && HasRequiredPortCapacity(docObject, definition)
+            return HasRequiredPortCapacity(docObject, definition)
                 ? 75 + exactNameBonus
                 : 0;
         }
