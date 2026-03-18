@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "livecanvas": {
+      "command": "dotnet",
+      "args": [
+        "<repo-root>/dist/agenthost/LiveCanvas.AgentHost.dll"
+      ],
+      "env": {
+        "LIVECANVAS_BRIDGE_URI": "ws://127.0.0.1:17881/livecanvas/v0"
+      }
+    }
+  }
+}
