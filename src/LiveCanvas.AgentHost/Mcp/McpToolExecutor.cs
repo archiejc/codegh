@@ -1,10 +1,9 @@
 using System.Text.Json;
 using LiveCanvas.AgentHost.BridgeClient;
+using LiveCanvas.AgentHost.Copilot;
 using LiveCanvas.AgentHost.ToolHandlers;
-using LiveCanvas.AgentHost.ToolState;
 using LiveCanvas.Contracts.Components;
-using LiveCanvas.Core.AllowedComponents;
-using LiveCanvas.Core.Validation;
+using LiveCanvas.Contracts.Copilot;
 
 namespace LiveCanvas.AgentHost.Mcp;
 
@@ -22,63 +21,111 @@ internal sealed class McpToolExecutor
     private readonly GhInspectDocumentTool inspectDocumentTool;
     private readonly GhCapturePreviewTool capturePreviewTool;
     private readonly GhSaveDocumentTool saveDocumentTool;
+    private readonly ICopilotPlanService copilotPlanService;
+    private readonly ICopilotApplyService copilotApplyService;
 
-    public McpToolExecutor()
+    public McpToolExecutor(
+        GhSessionInfoTool sessionInfoTool,
+        GhNewDocumentTool newDocumentTool,
+        GhListAllowedComponentsTool listAllowedComponentsTool,
+        GhAddComponentTool addComponentTool,
+        GhConfigureComponentTool configureComponentTool,
+        GhConnectTool connectTool,
+        GhDeleteComponentTool deleteComponentTool,
+        GhSolveTool solveTool,
+        GhInspectDocumentTool inspectDocumentTool,
+        GhCapturePreviewTool capturePreviewTool,
+        GhSaveDocumentTool saveDocumentTool,
+        ICopilotPlanService copilotPlanService,
+        ICopilotApplyService copilotApplyService)
     {
-        var registry = new AllowedComponentRegistry();
-        var componentSessionState = new ComponentSessionState();
-        var bridgeClient = new WebSocketBridgeClient();
-
-        sessionInfoTool = new GhSessionInfoTool(bridgeClient);
-        newDocumentTool = new GhNewDocumentTool(bridgeClient, componentSessionState);
-        listAllowedComponentsTool = new GhListAllowedComponentsTool(registry);
-        addComponentTool = new GhAddComponentTool(bridgeClient, registry, componentSessionState);
-        configureComponentTool = new GhConfigureComponentTool(bridgeClient, componentSessionState, new ComponentConfigValidator(registry));
-        connectTool = new GhConnectTool(bridgeClient, componentSessionState, new ConnectionValidator(registry));
-        deleteComponentTool = new GhDeleteComponentTool(bridgeClient, componentSessionState);
-        solveTool = new GhSolveTool(bridgeClient);
-        inspectDocumentTool = new GhInspectDocumentTool(bridgeClient);
-        capturePreviewTool = new GhCapturePreviewTool(bridgeClient);
-        saveDocumentTool = new GhSaveDocumentTool(bridgeClient);
+        this.sessionInfoTool = sessionInfoTool;
+        this.newDocumentTool = newDocumentTool;
+        this.listAllowedComponentsTool = listAllowedComponentsTool;
+        this.addComponentTool = addComponentTool;
+        this.configureComponentTool = configureComponentTool;
+        this.connectTool = connectTool;
+        this.deleteComponentTool = deleteComponentTool;
+        this.solveTool = solveTool;
+        this.inspectDocumentTool = inspectDocumentTool;
+        this.capturePreviewTool = capturePreviewTool;
+        this.saveDocumentTool = saveDocumentTool;
+        this.copilotPlanService = copilotPlanService;
+        this.copilotApplyService = copilotApplyService;
     }
 
     public async Task<object> InvokeAsync(string toolName, JsonElement arguments, CancellationToken cancellationToken)
     {
         return toolName switch
         {
-            "gh_session_info" => await sessionInfoTool.HandleAsync(cancellationToken),
-            "gh_new_document" => await newDocumentTool.HandleAsync(GetOptionalString(arguments, "name"), cancellationToken),
-            "gh_list_allowed_components" => await listAllowedComponentsTool.HandleAsync(cancellationToken),
-            "gh_add_component" => await addComponentTool.HandleAsync(
+            ToolDefinitions.GhSessionInfo => await sessionInfoTool.HandleAsync(cancellationToken),
+            ToolDefinitions.GhNewDocument => await newDocumentTool.HandleAsync(GetOptionalString(arguments, "name"), cancellationToken),
+            ToolDefinitions.GhListAllowedComponents => await listAllowedComponentsTool.HandleAsync(cancellationToken),
+            ToolDefinitions.GhAddComponent => await addComponentTool.HandleAsync(
                 GetRequiredString(arguments, "component_key"),
                 GetRequiredDouble(arguments, "x"),
                 GetRequiredDouble(arguments, "y"),
                 cancellationToken),
-            "gh_configure_component" => await configureComponentTool.HandleAsync(
+            ToolDefinitions.GhConfigureComponent => await configureComponentTool.HandleAsync(
                 GetRequiredString(arguments, "component_id"),
                 Deserialize<GhComponentConfig>(arguments, "config"),
                 cancellationToken),
-            "gh_connect" => await connectTool.HandleAsync(
+            ToolDefinitions.GhConnect => await connectTool.HandleAsync(
                 GetRequiredString(arguments, "source_id"),
                 GetRequiredString(arguments, "source_output"),
                 GetRequiredString(arguments, "target_id"),
                 GetRequiredString(arguments, "target_input"),
                 cancellationToken),
-            "gh_delete_component" => await deleteComponentTool.HandleAsync(GetRequiredString(arguments, "component_id"), cancellationToken),
-            "gh_solve" => await solveTool.HandleAsync(GetOptionalBoolean(arguments, "expire_all") ?? true, cancellationToken),
-            "gh_inspect_document" => await inspectDocumentTool.HandleAsync(
+            ToolDefinitions.GhDeleteComponent => await deleteComponentTool.HandleAsync(GetRequiredString(arguments, "component_id"), cancellationToken),
+            ToolDefinitions.GhSolve => await solveTool.HandleAsync(GetOptionalBoolean(arguments, "expire_all") ?? true, cancellationToken),
+            ToolDefinitions.GhInspectDocument => await inspectDocumentTool.HandleAsync(
                 GetOptionalBoolean(arguments, "include_connections") ?? true,
                 GetOptionalBoolean(arguments, "include_runtime_messages") ?? true,
                 cancellationToken),
-            "gh_capture_preview" => await capturePreviewTool.HandleAsync(
+            ToolDefinitions.GhCapturePreview => await capturePreviewTool.HandleAsync(
                 GetRequiredString(arguments, "path"),
                 GetRequiredInt(arguments, "width"),
                 GetRequiredInt(arguments, "height"),
                 cancellationToken),
-            "gh_save_document" => await saveDocumentTool.HandleAsync(GetRequiredString(arguments, "path"), cancellationToken),
+            ToolDefinitions.GhSaveDocument => await saveDocumentTool.HandleAsync(GetRequiredString(arguments, "path"), cancellationToken),
+            ToolDefinitions.CopilotPlan => await copilotPlanService.CreatePlanAsync(ParseCopilotPlanRequest(arguments), cancellationToken),
+            ToolDefinitions.CopilotApplyPlan => await copilotApplyService.ApplyPlanAsync(ParseCopilotApplyPlanRequest(arguments), cancellationToken),
             _ => throw new ArgumentException($"Unknown MCP tool '{toolName}'.")
         };
     }
+
+    private CopilotPlanRequest ParseCopilotPlanRequest(JsonElement arguments)
+    {
+        var prompt = GetRequiredString(arguments, "prompt");
+        IReadOnlyList<string>? imagePaths = null;
+
+        if (arguments.TryGetProperty("image_paths", out var imagePathsElement))
+        {
+            imagePaths = ParseOptionalStringArray("image_paths", imagePathsElement);
+        }
+
+        return new CopilotPlanRequest(prompt, imagePaths);
+    }
+
+    private CopilotApplyPlanRequest ParseCopilotApplyPlanRequest(JsonElement arguments)
+    {
+        var executionPlan = Deserialize<CopilotExecutionPlan>(arguments, "execution_plan");
+        var outputDir = GetOptionalString(arguments, "output_dir");
+        var previewWidth = GetOptionalInt(arguments, "preview_width");
+        var previewHeight = GetOptionalInt(arguments, "preview_height");
+        var expireAll = GetOptionalBoolean(arguments, "expire_all");
+
+        return new CopilotApplyPlanRequest(
+            executionPlan,
+            outputDir,
+            previewWidth,
+            previewHeight,
+            expireAll);
+    }
+
+    private T DeserializeRoot<T>(JsonElement value) =>
+        value.Deserialize<T>(jsonOptions)
+            ?? throw new ArgumentException($"Could not deserialize request as {typeof(T).Name}.");
 
     private T Deserialize<T>(JsonElement arguments, string propertyName)
     {
@@ -87,8 +134,41 @@ internal sealed class McpToolExecutor
             throw new ArgumentException($"Missing required argument '{propertyName}'.");
         }
 
-        return property.Deserialize<T>(jsonOptions)
-            ?? throw new ArgumentException($"Could not deserialize '{propertyName}' as {typeof(T).Name}.");
+        try
+        {
+            return property.Deserialize<T>(jsonOptions)
+                ?? throw new ArgumentException($"Could not deserialize '{propertyName}' as {typeof(T).Name}.");
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException($"Could not deserialize '{propertyName}' as {typeof(T).Name}.", ex);
+        }
+    }
+
+    private static IReadOnlyList<string>? ParseOptionalStringArray(string propertyName, JsonElement property)
+    {
+        if (property.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (property.ValueKind != JsonValueKind.Array)
+        {
+            throw new ArgumentException($"Optional argument '{propertyName}' must be an array of strings.");
+        }
+
+        var items = new List<string>();
+        foreach (var item in property.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(item.GetString()))
+            {
+                throw new ArgumentException($"Optional argument '{propertyName}' must be an array of non-empty strings.");
+            }
+
+            items.Add(item.GetString()!);
+        }
+
+        return items;
     }
 
     private static string GetRequiredString(JsonElement arguments, string propertyName) =>
@@ -110,6 +190,11 @@ internal sealed class McpToolExecutor
         arguments.TryGetProperty(propertyName, out var property) && property.TryGetInt32(out var value)
             ? value
             : throw new ArgumentException($"Missing required integer argument '{propertyName}'.");
+
+    private static int? GetOptionalInt(JsonElement arguments, string propertyName) =>
+        arguments.TryGetProperty(propertyName, out var property) && property.TryGetInt32(out var value)
+            ? value
+            : null;
 
     private static bool? GetOptionalBoolean(JsonElement arguments, string propertyName) =>
         arguments.TryGetProperty(propertyName, out var property) && (property.ValueKind is JsonValueKind.True or JsonValueKind.False)

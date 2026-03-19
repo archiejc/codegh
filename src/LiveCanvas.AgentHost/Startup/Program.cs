@@ -6,7 +6,7 @@ public static class Program
 {
     public static async Task Main(string[] args)
     {
-        var server = new StdioMcpServer(new McpToolExecutor());
+        var server = new AgentHostCompositionRoot().CreateServer();
         await server.RunAsync();
     }
 }

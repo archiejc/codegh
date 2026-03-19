@@ -69,6 +69,10 @@ internal sealed class StdioMcpServer
         {
             return Error(request.Id, -32001, ex.Message);
         }
+        catch (McpToolUnavailableException ex)
+        {
+            return Error(request.Id, -32004, ex.Message);
+        }
         catch (ArgumentException ex)
         {
             return Error(request.Id, -32602, ex.Message);

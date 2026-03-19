@@ -1,6 +1,6 @@
 using LiveCanvas.Contracts.Components;
 
-namespace LiveCanvas.Core.Planner;
+namespace LiveCanvas.Contracts.Planner;
 
 public sealed record GraphComponentPlan(
     string Alias,

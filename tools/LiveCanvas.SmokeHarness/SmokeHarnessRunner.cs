@@ -29,7 +29,9 @@ public sealed class SmokeHarnessRunner
         "gh_solve",
         "gh_inspect_document",
         "gh_capture_preview",
-        "gh_save_document"
+        "gh_save_document",
+        "copilot_plan",
+        "copilot_apply_plan"
     ];
 
     private static readonly SmokeScenarioDefinition SmokeScenario = new(

@@ -1,4 +1,5 @@
 using LiveCanvas.Contracts.Components;
+using LiveCanvas.Contracts.Planner;
 using LiveCanvas.Contracts.ReferenceInterpretation;
 using LiveCanvas.Core.AllowedComponents;
 using LiveCanvas.Core.ReferenceInterpretation;
