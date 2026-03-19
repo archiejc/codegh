@@ -17,6 +17,7 @@
     <ProjectReference Include="..\..\src\LiveCanvas.Core\LiveCanvas.Core.csproj" />
     <ProjectReference Include="..\..\src\LiveCanvas.Bridge.Protocol\LiveCanvas.Bridge.Protocol.csproj" />
     <ProjectReference Include="..\..\src\LiveCanvas.AgentHost\LiveCanvas.AgentHost.csproj" />
+    <ProjectReference Include="..\..\tools\LiveCanvas.SmokeHarness\LiveCanvas.SmokeHarness.csproj" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">

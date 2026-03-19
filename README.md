@@ -1,52 +1,85 @@
 # LiveCanvas MCP for Rhino + Grasshopper
 
-This repository contains a `.NET` MCP host and a Rhino plugin that together provide a local Grasshopper automation workflow.
+This repository contains the LiveCanvas runtime stack for Rhino 8 and Grasshopper:
 
-The MCP entrypoint is `src/LiveCanvas.AgentHost` (stdio MCP server).
+- a stdio MCP host in `src/LiveCanvas.AgentHost`
+- a Rhino plugin in `src/LiveCanvas.RhinoPlugin`
+- a local WebSocket bridge between them at `ws://127.0.0.1:17881/livecanvas/v0`
+
+The active MCP entrypoint is `src/LiveCanvas.AgentHost`.
 
 The legacy folder `mcps/GH_mcp_server` is currently empty and is not the runtime entrypoint for this repository.
 
 ## What Is In This Repo
 
-- `src/LiveCanvas.AgentHost`: stdio MCP server (`initialize`, `tools/list`, `tools/call`)
-- `src/LiveCanvas.RhinoPlugin`: Rhino plugin (`.rhp`) exposing a local websocket bridge
-- `src/LiveCanvas.Bridge.Protocol`: shared bridge protocol/constants
-- `src/LiveCanvas.Contracts` and `src/LiveCanvas.Core`: tool contracts and validation/planning logic
-- `tests/*`: unit and integration test projects (see limitations section for current test-source gaps)
+Core projects:
 
-## Architecture
+- `src/LiveCanvas.AgentHost`
+  `stdio` MCP host exposing `gh_*` tools
+- `src/LiveCanvas.RhinoPlugin`
+  Rhino plugin hosting the local bridge
+- `src/LiveCanvas.Bridge.Protocol`
+  JSON-RPC method names and serialization helpers
+- `src/LiveCanvas.Contracts`
+  request and response contracts
+- `src/LiveCanvas.Core`
+  allowed-component registry and validation logic
+- `tools/LiveCanvas.SmokeHarness`
+  smoke harness for mock and live runtime checks
 
-1. MCP client (Codex/Claude/Cursor/etc.) starts `LiveCanvas.AgentHost` over stdio.
-2. `LiveCanvas.AgentHost` exposes MCP tools such as `gh_session_info`, `gh_add_component`, `gh_save_document`.
-3. Tool handlers call a local websocket bridge (default `ws://127.0.0.1:17881/livecanvas/v0`).
-4. `LiveCanvas.RhinoPlugin` runs inside Rhino, receives bridge requests, and manipulates Grasshopper.
+Supporting scripts:
+
+- `scripts/publish_agenthost.sh`
+  publish the MCP host on macOS/Linux or Git Bash
+- `scripts/publish_agenthost.ps1`
+  publish the MCP host on Windows PowerShell
+- `scripts/smoke_mcp_stdio.py`
+  verify MCP `initialize` and `tools/list`
+- `scripts/check_live_bridge.py`
+  verify that MCP can reach the Rhino bridge through `gh_session_info`
+- `scripts/install-mcp-livecanvas-mac.sh`
+  macOS-focused setup helper for Codex and Claude Code
+
+## Runtime Architecture
+
+```text
+Agent / IDE
+  -> MCP stdio
+  -> LiveCanvas.AgentHost
+  -> ws://127.0.0.1:17881/livecanvas/v0
+  -> LiveCanvas.RhinoPlugin (inside Rhino 8)
+  -> Grasshopper document mutations, solve, inspect, capture, save
+```
 
 ## Prerequisites
 
 ### Common
 
-- `.NET SDK 8.x` (`dotnet --info`)
+- `.NET SDK 8.x`
 - Git
-- Python 3 (for helper smoke scripts under `scripts/`)
+- Python 3 for the smoke scripts under `scripts/`
 
 ### macOS
 
-- Rhino 8 for Mac installed in the default app path (`/Applications/Rhino 8.app`)
-  - The plugin project references Rhino/Grasshopper assemblies from this location.
+- Rhino 8 for Mac installed at `/Applications/Rhino 8.app`
+- Grasshopper available in Rhino
+- Optional: Terminal Accessibility permission if you want to use the scripted UI helpers
 
 ### Windows
 
-- Rhino 8 installed in the default path (`C:\Program Files\Rhino 8`)
-  - The plugin project references Rhino/Grasshopper assemblies from this location.
+- Rhino 8 installed at `C:\Program Files\Rhino 8`
+- Grasshopper available in Rhino
 
 ### Linux
 
-- MCP host can run for handshake/testing.
-- Rhino plugin/live bridge workflow is not supported on Linux.
+- Host-only MCP publish and stdio smoke verification are supported
+- Rhino plugin and live bridge workflow are not supported
 
 ## Quick Start (Host-Only, All Platforms)
 
-1. Publish the MCP host with a cross-platform `dotnet` command:
+This path is the safest fresh-clone entrypoint and does not require Rhino.
+
+1. Publish the MCP host:
 
 ```bash
 dotnet publish src/LiveCanvas.AgentHost/LiveCanvas.AgentHost.csproj -c Release -o ./dist/agenthost
@@ -68,27 +101,17 @@ pwsh ./scripts/publish_agenthost.ps1
 python3 ./scripts/smoke_mcp_stdio.py --agent-host dist/agenthost
 ```
 
-3. Configure your MCP client to launch the published host (example below).
+3. Configure your MCP client to launch the published host.
 
 At this point, MCP transport is verified. This host-only path works on macOS, Windows, and Linux.
 
-If you want the full live Rhino + Grasshopper workflow, continue with the platform-specific steps below. Linux stops at the host-only path.
-
-## Full Solution Build (macOS/Windows + Rhino Only)
-
-If Rhino 8 is installed at the default platform path and you want to build the plugin as well:
-
-```bash
-dotnet build LiveCanvas.sln
-```
-
 ## MCP Client Configuration Example
 
-An example config is provided at:
+Example file:
 
 - `scripts/examples/livecanvas.mcp.config.example.json`
 
-The common shape is:
+Recommended cross-platform form:
 
 ```json
 {
@@ -106,68 +129,191 @@ The common shape is:
 
 Notes:
 
-- The `dotnet` + `.dll` form is the safest cross-platform default for config examples.
-- On macOS/Linux you can point `command` directly at `dist/agenthost/LiveCanvas.AgentHost` if you prefer.
-- On Windows you can point `command` directly at `dist\\agenthost\\LiveCanvas.AgentHost.exe` if you prefer.
 - `LIVECANVAS_BRIDGE_URI` is optional. If omitted, the default bridge URI is used.
+- On macOS/Linux you can point `command` directly at `dist/agenthost/LiveCanvas.AgentHost`.
+- On Windows you can point `command` directly at `dist\\agenthost\\LiveCanvas.AgentHost.exe`.
 
-## Rhino Plugin Setup (Live Bridge)
+## Full Live Workflow
 
-This section applies to macOS and Windows only.
+### macOS One-Command Setup
 
-1. Build plugin:
-
-```bash
-dotnet build src/LiveCanvas.RhinoPlugin/LiveCanvas.RhinoPlugin.csproj
-```
-
-2. Load the built `.rhp` into Rhino 8.
-3. Open Grasshopper in Rhino.
-4. Verify bridge reachability through MCP:
+After cloning this repository, you can build, deploy, and register the MCP server for Codex and Claude Code with:
 
 ```bash
-python3 ./scripts/check_live_bridge.py --agent-host dist/agenthost
+bash scripts/install-mcp-livecanvas-mac.sh --target both
 ```
 
-If successful, this returns structured session info from Rhino/Grasshopper.
+Single-client variants:
 
-If Rhino/plugin is not running, the script reports bridge unavailability with a clear message.
+```bash
+bash scripts/install-mcp-livecanvas-mac.sh --target codex
+bash scripts/install-mcp-livecanvas-mac.sh --target claude
+```
+
+What this does:
+
+- builds the Rhino plugin, AgentHost, and smoke harness
+- deploys the Rhino plugin into Rhino 8 MacPlugIns
+- writes a `livecanvas` MCP stdio entry into the selected client config file
+
+After the install script finishes:
+
+1. Restart Codex Desktop and or Claude Code.
+2. Open Rhino 8.
+3. Create a Rhino document.
+4. Open Grasshopper.
+5. Ask the client to call `gh_session_info`.
+
+### macOS Manual Live Setup
+
+Build from source:
+
+```bash
+dotnet build LiveCanvas.sln -v minimal
+```
+
+Optional helper:
+
+```bash
+scripts/build-rhino-plugin-mac.sh Debug
+```
+
+Deploy plugin to Rhino MacPlugIns:
+
+```bash
+scripts/deploy-rhino-plugin-mac.sh Debug
+```
+
+This syncs:
+
+- `~/Library/Application Support/McNeel/Rhinoceros/8.0/MacPlugIns/LiveCanvas.RhinoPlugin/`
+- `~/Library/Application Support/McNeel/Rhinoceros/8.0/MacPlugIns/LiveCanvas.RhinoPlugin.rhp/`
+
+Open Rhino and Grasshopper:
+
+```bash
+scripts/open-rhino-grasshopper-mac.sh
+```
+
+Manual alternative:
+
+1. Open Rhino 8.
+2. Create a new document.
+3. Run `Grasshopper`.
+
+### Windows Live Setup
+
+There is no Windows helper script yet. The supported manual path is:
+
+1. Build `src/LiveCanvas.RhinoPlugin/LiveCanvas.RhinoPlugin.csproj`
+2. Load the built `.rhp` into Rhino 8
+3. Open Grasshopper
+4. Publish `LiveCanvas.AgentHost`
+5. Run the bridge preflight shown below
 
 ## Validation Commands
 
-- Publish host with `dotnet`:
+Host-only:
+
+- Publish host with `dotnet`
   - `dotnet publish src/LiveCanvas.AgentHost/LiveCanvas.AgentHost.csproj -c Release -o ./dist/agenthost`
-- Publish host with shell helper (macOS/Linux/Git Bash):
+- Publish host with shell helper
   - `./scripts/publish_agenthost.sh`
-- Publish host with PowerShell helper (Windows):
+- Publish host with PowerShell helper
   - `pwsh ./scripts/publish_agenthost.ps1`
-- Build full solution (macOS/Windows + Rhino only):
-  - `dotnet build LiveCanvas.sln`
-- MCP handshake smoke:
+- MCP handshake smoke
   - `python3 ./scripts/smoke_mcp_stdio.py --agent-host dist/agenthost`
-- Live bridge preflight:
+
+Live bridge:
+
+- Bridge preflight through MCP
   - `python3 ./scripts/check_live_bridge.py --agent-host dist/agenthost`
+- Bridge preflight but do not fail the shell when Rhino is offline
+  - `python3 ./scripts/check_live_bridge.py --agent-host dist/agenthost --allow-offline`
+
+macOS live smoke harness:
+
+- Bridge only
+  - `scripts/live-smoke-mac.sh --bridge-only --timeout-seconds 30`
+- Full live chain
+  - `scripts/live-smoke-mac.sh --timeout-seconds 30`
+- One-shot dev flow
+  - `scripts/dev-smoke-mac.sh --timeout-seconds 30`
+- Skip open if Rhino and Grasshopper are already running
+  - `scripts/dev-smoke-mac.sh --skip-open --timeout-seconds 30`
+
+Direct smoke harness command:
+
+```bash
+dotnet run --project tools/LiveCanvas.SmokeHarness/LiveCanvas.SmokeHarness.csproj -- --mode live --live-preflight-timeout-seconds 30
+```
+
+## Use From An MCP-Capable Coding Agent
+
+On macOS, the repo already includes a launcher tailored to the Rhino bridge workflow:
+
+```bash
+/absolute/path/to/scripts/run-agenthost-mac.sh --skip-build
+```
+
+If you want it to rebuild `LiveCanvas.AgentHost` before startup:
+
+```bash
+/absolute/path/to/scripts/run-agenthost-mac.sh
+```
+
+If your client needs an explicit bridge URI:
+
+```bash
+/absolute/path/to/scripts/run-agenthost-mac.sh --skip-build --bridge-uri ws://127.0.0.1:17881/livecanvas/v0
+```
+
+For portable client configs across machines, prefer the documented `dotnet` + `.dll` form shown above.
+
+## Modeling Demo
+
+The repo includes an Absolute Towers style live demo scene:
+
+```bash
+bash scripts/demo-absolute-towers-mac.sh --timeout-seconds 30
+```
+
+Expected stdout includes:
+
+- `[ok] bridge-jsonrpc-live`
+- `[ok] mcp-stdio-live`
+- `output_dir=...`
+
+Expected artifacts inside the printed output directory:
+
+- `absolute-towers.gh`
+- `manifest.json`
+- `transcript.json`
+
+If Rhino exposes an active document and viewport, the run may also write `preview.png`.
 
 ## Troubleshooting
 
-- `Bridge unavailable`:
-  - Ensure Rhino 8 is running and plugin is loaded.
-  - Confirm bridge URI matches plugin listener (`LIVECANVAS_BRIDGE_URI`).
-- Plugin build fails with missing Rhino assemblies:
-  - Verify Rhino 8 is installed at the default path for your OS, or update `.csproj` hint paths accordingly.
-- MCP client cannot start host:
-  - Check executable permissions (`chmod +x dist/agenthost/LiveCanvas.AgentHost` on macOS/Linux).
-  - Try running the host manually from terminal first.
-  - On Windows, prefer the documented `dotnet` + `.dll` config if you are unsure which executable path your MCP client expects.
+- `Bridge unavailable`
+  - Ensure Rhino 8 is running and the plugin is loaded.
+  - Confirm the bridge URI matches the plugin listener.
+- Plugin build fails with missing Rhino assemblies
+  - Verify Rhino 8 is installed at the default path for your OS, or update the `.csproj` hint paths.
+- MCP client cannot start host
+  - On macOS/Linux, check executable permissions on `dist/agenthost/LiveCanvas.AgentHost`.
+  - On Windows, prefer the `dotnet` + `.dll` form if you are unsure which executable path your MCP client expects.
+- Smoke scripts hang or stall
+  - Both Python smoke scripts honor `--timeout-seconds` and will now fail fast if the host starts but does not answer.
 
 ## Current Limitations
 
-- No one-click installer/package yet for plugin distribution.
-- Plugin assembly references currently assume default Rhino installation paths.
-- Legacy `codelistener.rhi` artifact exists for historical context and is not the active LiveCanvas plugin.
-- Some test projects currently rely on local build artifacts and need additional source cleanup for fully deterministic fresh-clone test parity.
+- No one-click cross-platform installer exists for the Rhino plugin.
+- Windows helper scripts are still missing; the richer helper flow is macOS-first.
+- Plugin assembly references assume default Rhino installation paths.
+- The legacy `codelistener.rhi` artifact remains in the repository for historical context and is not the active LiveCanvas plugin.
+- Some test projects still need cleanup for fully deterministic fresh-clone test parity.
 
 ## Related Notes
 
-- Historical design notes are in `doc/2026-03-13-rhino8-mac-codelistener-design.md`.
-- That document includes background references to legacy MCP paths and is not the canonical runtime setup guide.
+- Historical design notes live in `doc/2026-03-13-rhino8-mac-codelistener-design.md`
+- That design document still contains historical references to an old Python MCP path and should not be treated as the canonical setup guide

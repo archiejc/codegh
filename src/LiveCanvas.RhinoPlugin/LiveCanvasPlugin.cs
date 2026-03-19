@@ -1,5 +1,6 @@
 using LiveCanvas.Core.AllowedComponents;
 using LiveCanvas.Core.Validation;
+using LiveCanvas.RhinoPlugin.Diagnostics;
 using LiveCanvas.RhinoPlugin.Bridge;
 using LiveCanvas.RhinoPlugin.Runtime;
 using Rhino.PlugIns;
@@ -21,6 +22,8 @@ public sealed class LiveCanvasPlugin : PlugIn
     {
         try
         {
+            LiveCanvasLog.Clear();
+            LiveCanvasLog.Write("plugin onload start");
             var registry = new AllowedComponentRegistry();
             var runtime = new LiveCanvasRuntime(
                 registry,
@@ -32,10 +35,12 @@ public sealed class LiveCanvasPlugin : PlugIn
                 new LiveCanvasBridgeDispatcher(runtime));
 
             bridgeServer.Start();
+            LiveCanvasLog.Write("plugin onload completed");
             return LoadReturnCode.Success;
         }
         catch (Exception ex)
         {
+            LiveCanvasLog.Write($"plugin onload failed: {ex}");
             errorMessage = ex.Message;
             return LoadReturnCode.ErrorShowDialog;
         }
@@ -43,6 +48,7 @@ public sealed class LiveCanvasPlugin : PlugIn
 
     protected override void OnShutdown()
     {
+        LiveCanvasLog.Write("plugin shutdown");
         bridgeServer?.Dispose();
         bridgeServer = null;
         base.OnShutdown();

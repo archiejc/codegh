@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFrameworks>net7.0;net8.0</TargetFrameworks>
     <RootNamespace>LiveCanvas.Bridge.Protocol</RootNamespace>
     <AssemblyName>LiveCanvas.Bridge.Protocol</AssemblyName>
   </PropertyGroup>
