@@ -29,6 +29,7 @@ public sealed class GhConnectTool : ToolHandlerBase
     {
         if (componentSessionState.TryGetComponentKey(sourceId, out var sourceComponentKey)
             && componentSessionState.TryGetComponentKey(targetId, out var targetComponentKey)
+            && connectionValidator.CanValidate(sourceComponentKey!, targetComponentKey!)
             && !connectionValidator.IsValid(sourceComponentKey!, sourceOutput, targetComponentKey!, targetInput))
         {
             throw new ArgumentException("Invalid connection request for whitelisted components/ports.");

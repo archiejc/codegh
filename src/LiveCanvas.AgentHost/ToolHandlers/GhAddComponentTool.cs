@@ -26,12 +26,21 @@ public sealed class GhAddComponentTool : ToolHandlerBase
         double y,
         CancellationToken cancellationToken = default)
     {
-        _ = allowedComponentRegistry.GetRequired(componentKey);
-
         var response = await BridgeClient.InvokeAsync<GhAddComponentResponse>(
             BridgeMethodNames.GhAddComponent,
             new GhAddComponentRequest(componentKey, x, y),
             cancellationToken);
+
+        if (!allowedComponentRegistry.TryGet(response.ComponentKey, out _))
+        {
+            allowedComponentRegistry.Upsert(new AllowedComponentDefinition(
+                ComponentKey: response.ComponentKey,
+                DisplayName: response.DisplayName,
+                Category: "Discovered",
+                Inputs: response.Inputs.Select((name, index) => new AllowedComponentPortInfo(name, "input", index)).ToArray(),
+                Outputs: response.Outputs.Select((name, index) => new AllowedComponentPortInfo(name, "output", index)).ToArray(),
+                ConfigFields: [new AllowedComponentConfigField("nickname", "string", false)]));
+        }
 
         componentSessionState.Track(response.ComponentId, response.ComponentKey);
         return response;

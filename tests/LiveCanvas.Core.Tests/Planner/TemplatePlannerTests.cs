@@ -29,6 +29,36 @@ public class TemplatePlannerTests
     }
 
     [Fact]
+    public void podium_tower_plan_emits_two_extrusions()
+    {
+        var plan = planner.CreatePlan(MakeBrief(MassingTemplate.PodiumTower));
+
+        plan.TemplateName.Should().Be(MassingTemplate.PodiumTower);
+        plan.Components.Count(component => component.ComponentKey == V0ComponentKeys.Extrude).Should().Be(2);
+        plan.Components.Select(component => component.Alias).Should().Contain(["podium_extrude", "tower_extrude"]);
+    }
+
+    [Fact]
+    public void stepped_extrusions_plan_respects_step_count_range()
+    {
+        var plan = planner.CreatePlan(MakeBrief(MassingTemplate.SteppedExtrusions, stepCount: 4));
+
+        plan.TemplateName.Should().Be(MassingTemplate.SteppedExtrusions);
+        plan.Components.Count(component => component.ComponentKey == V0ComponentKeys.Extrude).Should().Be(4);
+        plan.Components.Select(component => component.Alias).Should().Contain("tier_4_extrude");
+    }
+
+    [Fact]
+    public void stacked_bars_plan_emits_three_bars_with_offsets()
+    {
+        var plan = planner.CreatePlan(MakeBrief(MassingTemplate.StackedBars));
+
+        plan.TemplateName.Should().Be(MassingTemplate.StackedBars);
+        plan.Components.Count(component => component.ComponentKey == V0ComponentKeys.Extrude).Should().Be(3);
+        plan.Components.Select(component => component.Alias).Should().Contain(["bar_2_offset_x", "bar_2_offset_y", "bar_3_offset_x", "bar_3_offset_y"]);
+    }
+
+    [Fact]
     public void emits_deterministic_canvas_positions()
     {
         var plan = planner.CreatePlan(MakeBrief(MassingTemplate.SingleExtrusion));
@@ -49,13 +79,13 @@ public class TemplatePlannerTests
         plan.Components.Select(component => component.ComponentKey).Should().OnlyContain(key => allowed.Contains(key));
     }
 
-    private static ReferenceBrief MakeBrief(string template) =>
+    private static ReferenceBrief MakeBrief(string template, int? stepCount = 3) =>
         new(
             BuildingType: "tower",
             SiteContext: "urban",
             MassingStrategy: template,
             ApproxDimensions: new ApproxDimensions(30, 20, 90),
-            Leveling: new LevelingHints(18, 72, 3),
+            Leveling: new LevelingHints(18, 72, stepCount),
             TransformHints: new TransformHints(0, 1.0, null),
             StyleHints: new StyleHints([200, 200, 210], "clean"),
             Confidence: 0.8,

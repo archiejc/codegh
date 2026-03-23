@@ -40,6 +40,14 @@ public class SmokeHarnessCliTests
     }
 
     [Fact]
+    public void parse_supports_copilot_absolute_towers_scenario()
+    {
+        var options = SmokeHarnessCli.Parse(["--scenario", "copilot-absolute-towers"]);
+
+        options.Scenario.Should().Be(SmokeHarnessScenario.CopilotAbsoluteTowers);
+    }
+
+    [Fact]
     public void parse_rejects_invalid_flag_combinations()
     {
         var act = () => SmokeHarnessCli.Parse(["--bridge-only", "--mcp-only"]);

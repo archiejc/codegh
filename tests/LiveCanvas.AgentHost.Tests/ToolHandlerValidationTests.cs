@@ -38,13 +38,17 @@ public class ToolHandlerValidationTests
     }
 
     [Fact]
-    public async Task gh_add_component_rejects_unknown_component_key_before_bridge_call()
+    public async Task gh_add_component_defers_unknown_component_key_to_bridge()
     {
-        var tool = new GhAddComponentTool(new RecordingBridgeClient(new GhAddComponentResponse("cmp_1", V0ComponentKeys.NumberSlider, "cmp_1", "Number Slider", 0, 0, [], ["N"])), allowedComponentRegistry, new ComponentSessionState());
+        const string dynamicKey = "gh_guid:11111111111111111111111111111111";
+        var bridgeClient = new RecordingBridgeClient(new GhAddComponentResponse("cmp_1", dynamicKey, "cmp_1", "Dynamic", 0, 0, ["A"], ["B"]));
+        var tool = new GhAddComponentTool(bridgeClient, allowedComponentRegistry, new ComponentSessionState());
 
-        var act = async () => await tool.HandleAsync("unknown_component", 0, 0);
+        await tool.HandleAsync(dynamicKey, 0, 0);
 
-        await act.Should().ThrowAsync<KeyNotFoundException>();
+        bridgeClient.LastPayload.Should().BeOfType<GhAddComponentRequest>();
+        ((GhAddComponentRequest)bridgeClient.LastPayload!).ComponentKey.Should().Be(dynamicKey);
+        allowedComponentRegistry.GetRequired(dynamicKey).DisplayName.Should().Be("Dynamic");
     }
 
     [Fact]
@@ -103,6 +107,60 @@ public class ToolHandlerValidationTests
         var act = async () => await tool.HandleAsync("cmp_1", "bad", "cmp_2", "P");
 
         await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task gh_configure_component_v2_normalizes_slider_adapter_when_component_key_is_known()
+    {
+        var bridgeClient = new RecordingBridgeClient(new GhConfigureComponentV2Response(
+            "cmp_1",
+            true,
+            new GhComponentConfigV2(
+                "gh_component_config/v2",
+                [
+                    new AdapterConfigComponentConfigOp(new NumberSliderAdapterConfig(0, 100, 100, false))
+                ]),
+            []));
+        var componentState = new ComponentSessionState();
+        componentState.Track("cmp_1", V0ComponentKeys.NumberSlider);
+        var tool = new GhConfigureComponentV2Tool(bridgeClient, componentState, new ComponentConfigV2Validator(allowedComponentRegistry));
+
+        await tool.HandleAsync(
+            "cmp_1",
+            new GhComponentConfigV2(
+                "gh_component_config/v2",
+                [
+                    new AdapterConfigComponentConfigOp(new NumberSliderAdapterConfig(0, 100, 150, false))
+                ]));
+
+        bridgeClient.LastPayload.Should().BeOfType<GhConfigureComponentV2Request>();
+        var payload = (GhConfigureComponentV2Request)bridgeClient.LastPayload!;
+        var op = payload.Config.Ops.Should().ContainSingle().Subject.Should().BeOfType<AdapterConfigComponentConfigOp>().Subject;
+        op.Config.Should().BeOfType<NumberSliderAdapterConfig>();
+        ((NumberSliderAdapterConfig)op.Config).Value.Should().Be(100);
+    }
+
+    [Fact]
+    public async Task gh_list_allowed_components_prefers_bridge_and_updates_registry()
+    {
+        const string dynamicKey = "gh_guid:22222222222222222222222222222222";
+        var bridgeClient = new RecordingBridgeClient(new GhListAllowedComponentsResponse(
+            [
+                new AllowedComponentDefinition(
+                    dynamicKey,
+                    "Dynamic",
+                    "Sets",
+                    [new AllowedComponentPortInfo("A", "input", 0)],
+                    [new AllowedComponentPortInfo("B", "output", 0)],
+                    [],
+                    [new AllowedComponentConfigOpDescriptor("set_nickname")])
+            ]));
+        var tool = new GhListAllowedComponentsTool(bridgeClient, allowedComponentRegistry);
+
+        var response = await tool.HandleAsync();
+
+        response.Components.Should().ContainSingle(component => component.ComponentKey == dynamicKey);
+        allowedComponentRegistry.GetRequired(dynamicKey).DisplayName.Should().Be("Dynamic");
     }
 
     private sealed class RecordingBridgeClient(object response) : IBridgeClient

@@ -19,14 +19,14 @@ internal static class McpToolCatalog
                     [("name", StringSchema("Optional display name for the new Grasshopper document."))])),
             [ToolDefinitions.GhListAllowedComponents] = Tool(
                 ToolDefinitions.GhListAllowedComponents,
-                "List the native Grasshopper components allowed in LiveCanvas v0, including canonical port names and config fields.",
+                "List the Grasshopper components available to LiveCanvas, including canonical port names, legacy config fields, and v2 config ops when available.",
                 Schema()),
             [ToolDefinitions.GhAddComponent] = Tool(
                 ToolDefinitions.GhAddComponent,
-                "Add one allowed native Grasshopper component at a deterministic canvas position.",
+                "Add one available Grasshopper component at a deterministic canvas position.",
                 Schema(
                     [
-                        ("component_key", StringSchema("Canonical whitelist key returned by gh_list_allowed_components.")),
+                        ("component_key", StringSchema("Component key returned by gh_list_allowed_components.")),
                         ("x", NumberSchema("Canvas x coordinate in pixels.")),
                         ("y", NumberSchema("Canvas y coordinate in pixels."))
                     ],
@@ -38,6 +38,15 @@ internal static class McpToolCatalog
                     [
                         ("component_id", StringSchema("Component identifier returned by gh_add_component.")),
                         ("config", ConfigSchema())
+                    ],
+                    required: ["component_id", "config"])),
+            [ToolDefinitions.GhConfigureComponentV2] = Tool(
+                ToolDefinitions.GhConfigureComponentV2,
+                "Configure a previously added Grasshopper component using the extensible v2 op-based config contract.",
+                Schema(
+                    [
+                        ("component_id", StringSchema("Component identifier returned by gh_add_component.")),
+                        ("config", ConfigV2Schema())
                     ],
                     required: ["component_id", "config"])),
             [ToolDefinitions.GhConnect] = Tool(
@@ -76,8 +85,8 @@ internal static class McpToolCatalog
                 Schema(
                     [
                         ("path", StringSchema("Absolute image path for the preview capture (.png, .jpg, .jpeg).")),
-                        ("width", NumberSchema("Capture width in pixels.")),
-                        ("height", NumberSchema("Capture height in pixels."))
+                        ("width", IntegerSchema("Capture width in pixels.")),
+                        ("height", IntegerSchema("Capture height in pixels."))
                     ],
                     required: ["path", "width", "height"])),
             [ToolDefinitions.GhSaveDocument] = Tool(
@@ -111,8 +120,8 @@ internal static class McpToolCatalog
                             description = "A server-emitted copilot execution plan."
                         }),
                         ("output_dir", StringSchema("Optional absolute output directory.")),
-                        ("preview_width", NumberSchema("Optional preview width in pixels.")),
-                        ("preview_height", NumberSchema("Optional preview height in pixels.")),
+                        ("preview_width", IntegerSchema("Optional preview width in pixels.")),
+                        ("preview_height", IntegerSchema("Optional preview height in pixels.")),
                         ("expire_all", BooleanSchema("Whether to expire all objects before solving."))
                     ],
                     required: ["execution_plan"]))
@@ -150,6 +159,12 @@ internal static class McpToolCatalog
         description
     };
 
+    private static object IntegerSchema(string description) => new
+    {
+        type = "integer",
+        description
+    };
+
     private static object BooleanSchema(string description) => new
     {
         type = "boolean",
@@ -159,7 +174,7 @@ internal static class McpToolCatalog
     private static object ConfigSchema() => new
     {
         type = "object",
-        description = "Narrow v0 config object. Only Number Slider, Panel, and Colour Swatch support additional fields beyond nickname.",
+        description = "Legacy v0 config object. Only Number Slider, Panel, and Colour Swatch support additional fields beyond nickname.",
         properties = new Dictionary<string, object>
         {
             ["nickname"] = StringSchema("Optional Grasshopper nickname."),
@@ -195,5 +210,26 @@ internal static class McpToolCatalog
                 }
             }
         }
+    };
+
+    private static object ConfigV2Schema() => new
+    {
+        type = "object",
+        description = "Extensible component config protocol. Use ops such as set_nickname, set_input_persistent_data, clear_input_persistent_data, set_param_flags, and adapter_config.",
+        properties = new Dictionary<string, object>
+        {
+            ["schema_version"] = StringSchema("Must be gh_component_config/v2."),
+            ["ops"] = new
+            {
+                type = "array",
+                description = "Ordered list of component config operations.",
+                items = new
+                {
+                    type = "object",
+                    description = "One component config operation."
+                }
+            }
+        },
+        required = new[] { "schema_version", "ops" }
     };
 }

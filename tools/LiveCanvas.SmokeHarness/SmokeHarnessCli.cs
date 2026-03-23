@@ -132,7 +132,8 @@ internal static class SmokeHarnessCli
         {
             "smoke" => SmokeHarnessScenario.Smoke,
             "absolute-towers" => SmokeHarnessScenario.AbsoluteTowers,
-            _ => throw new ArgumentException($"Unsupported scenario '{rawValue}'. Expected 'smoke' or 'absolute-towers'.")
+            "copilot-absolute-towers" => SmokeHarnessScenario.CopilotAbsoluteTowers,
+            _ => throw new ArgumentException($"Unsupported scenario '{rawValue}'. Expected 'smoke', 'absolute-towers', or 'copilot-absolute-towers'.")
         };
 
     private static string ParseConfiguration(string rawValue) =>

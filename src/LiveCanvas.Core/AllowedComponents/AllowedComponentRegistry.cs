@@ -1,19 +1,25 @@
 using LiveCanvas.Contracts.Components;
+using System.Collections.Concurrent;
 
 namespace LiveCanvas.Core.AllowedComponents;
 
 public sealed class AllowedComponentRegistry
 {
-    private readonly IReadOnlyDictionary<string, AllowedComponentDefinition> definitions;
+    private readonly ConcurrentDictionary<string, AllowedComponentDefinition> definitions;
 
     public AllowedComponentRegistry()
     {
-        definitions = BuildDefinitions()
-            .ToDictionary(def => def.ComponentKey, StringComparer.Ordinal);
+        definitions = new ConcurrentDictionary<string, AllowedComponentDefinition>(StringComparer.Ordinal);
+        foreach (var definition in BuildDefinitions())
+        {
+            definitions[definition.ComponentKey] = definition;
+        }
     }
 
     public IReadOnlyList<AllowedComponentDefinition> All() =>
-        definitions.Values.OrderBy(def => def.ComponentKey, StringComparer.Ordinal).ToList();
+        definitions.Values
+            .OrderBy(def => def.ComponentKey, StringComparer.Ordinal)
+            .ToList();
 
     public bool TryGet(string componentKey, out AllowedComponentDefinition? definition) =>
         definitions.TryGetValue(componentKey, out definition);
@@ -22,6 +28,34 @@ public sealed class AllowedComponentRegistry
         definitions.TryGetValue(componentKey, out var definition)
             ? definition
             : throw new KeyNotFoundException($"Unknown component key '{componentKey}'.");
+
+    public void Upsert(AllowedComponentDefinition definition)
+    {
+        if (definition is null)
+        {
+            throw new ArgumentNullException(nameof(definition));
+        }
+
+        definitions[definition.ComponentKey] = definition;
+    }
+
+    public void UpsertRange(IEnumerable<AllowedComponentDefinition> definitions)
+    {
+        if (definitions is null)
+        {
+            throw new ArgumentNullException(nameof(definitions));
+        }
+
+        foreach (var definition in definitions)
+        {
+            if (definition is null)
+            {
+                continue;
+            }
+
+            this.definitions[definition.ComponentKey] = definition;
+        }
+    }
 
     private static IEnumerable<AllowedComponentDefinition> BuildDefinitions()
     {
@@ -76,9 +110,39 @@ public sealed class AllowedComponentRegistry
         IReadOnlyList<AllowedComponentPortInfo> inputs,
         IReadOnlyList<AllowedComponentPortInfo> outputs,
         params AllowedComponentConfigField[] configFields) =>
-        new(componentKey, displayName, category, inputs, outputs, configFields);
+        new(componentKey, displayName, category, inputs, outputs, configFields, BuildConfigOps(componentKey, inputs.Count > 0));
 
     private static AllowedComponentPortInfo Input(string name, int index) => new(name, "input", index);
     private static AllowedComponentPortInfo Output(string name, int index) => new(name, "output", index);
     private static AllowedComponentConfigField Config(string name, string type) => new(name, type, false);
+
+    private static IReadOnlyList<AllowedComponentConfigOpDescriptor> BuildConfigOps(string componentKey, bool hasInputs)
+    {
+        var ops = new List<AllowedComponentConfigOpDescriptor>
+        {
+            new("set_nickname")
+        };
+
+        if (hasInputs)
+        {
+            ops.Add(new("set_input_persistent_data", SupportedValueTypes: ["number", "integer", "boolean", "string", "point3d", "vector3d", "color", "list"]));
+            ops.Add(new("clear_input_persistent_data"));
+            ops.Add(new("set_param_flags", SupportedFlags: ["flatten", "graft", "simplify"]));
+        }
+
+        switch (componentKey)
+        {
+            case V0ComponentKeys.NumberSlider:
+                ops.Add(new("adapter_config", Adapter: "number_slider"));
+                break;
+            case V0ComponentKeys.Panel:
+                ops.Add(new("adapter_config", Adapter: "panel"));
+                break;
+            case V0ComponentKeys.ColourSwatch:
+                ops.Add(new("adapter_config", Adapter: "colour_swatch"));
+                break;
+        }
+
+        return ops;
+    }
 }

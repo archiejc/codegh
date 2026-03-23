@@ -15,6 +15,7 @@ internal sealed class McpToolExecutor
     private readonly GhListAllowedComponentsTool listAllowedComponentsTool;
     private readonly GhAddComponentTool addComponentTool;
     private readonly GhConfigureComponentTool configureComponentTool;
+    private readonly GhConfigureComponentV2Tool configureComponentV2Tool;
     private readonly GhConnectTool connectTool;
     private readonly GhDeleteComponentTool deleteComponentTool;
     private readonly GhSolveTool solveTool;
@@ -30,6 +31,7 @@ internal sealed class McpToolExecutor
         GhListAllowedComponentsTool listAllowedComponentsTool,
         GhAddComponentTool addComponentTool,
         GhConfigureComponentTool configureComponentTool,
+        GhConfigureComponentV2Tool configureComponentV2Tool,
         GhConnectTool connectTool,
         GhDeleteComponentTool deleteComponentTool,
         GhSolveTool solveTool,
@@ -44,6 +46,7 @@ internal sealed class McpToolExecutor
         this.listAllowedComponentsTool = listAllowedComponentsTool;
         this.addComponentTool = addComponentTool;
         this.configureComponentTool = configureComponentTool;
+        this.configureComponentV2Tool = configureComponentV2Tool;
         this.connectTool = connectTool;
         this.deleteComponentTool = deleteComponentTool;
         this.solveTool = solveTool;
@@ -69,6 +72,10 @@ internal sealed class McpToolExecutor
             ToolDefinitions.GhConfigureComponent => await configureComponentTool.HandleAsync(
                 GetRequiredString(arguments, "component_id"),
                 Deserialize<GhComponentConfig>(arguments, "config"),
+                cancellationToken),
+            ToolDefinitions.GhConfigureComponentV2 => await configureComponentV2Tool.HandleAsync(
+                GetRequiredString(arguments, "component_id"),
+                Deserialize<GhComponentConfigV2>(arguments, "config"),
                 cancellationToken),
             ToolDefinitions.GhConnect => await connectTool.HandleAsync(
                 GetRequiredString(arguments, "source_id"),
