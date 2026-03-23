@@ -28,6 +28,7 @@ public sealed class LiveCanvasPlugin : PlugIn
             var runtime = new LiveCanvasRuntime(
                 registry,
                 new ComponentConfigValidator(registry),
+                new ComponentConfigV2Validator(registry),
                 new ConnectionValidator(registry));
 
             bridgeServer = new LiveCanvasBridgeServer(

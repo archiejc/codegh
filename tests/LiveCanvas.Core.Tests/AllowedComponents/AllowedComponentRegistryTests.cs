@@ -1,4 +1,5 @@
 using FluentAssertions;
+using LiveCanvas.Contracts.Components;
 using LiveCanvas.Core.AllowedComponents;
 
 namespace LiveCanvas.Core.Tests.AllowedComponents;
@@ -55,5 +56,47 @@ public class AllowedComponentRegistryTests
         slider.ConfigFields.Select(field => field.Name)
             .Should()
             .Contain(["min", "max", "value", "integer"]);
+    }
+
+    [Fact]
+    public void upsert_adds_new_component_definition()
+    {
+        registry.TryGet("gh_guid:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", out _).Should().BeFalse();
+
+        registry.Upsert(new AllowedComponentDefinition(
+            ComponentKey: "gh_guid:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            DisplayName: "Test Component",
+            Category: "Test",
+            Inputs: [new AllowedComponentPortInfo("X", "input", 0)],
+            Outputs: [new AllowedComponentPortInfo("Y", "output", 0)],
+            ConfigFields: [new AllowedComponentConfigField("nickname", "string", false)]));
+
+        registry.TryGet("gh_guid:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", out var def).Should().BeTrue();
+        def!.DisplayName.Should().Be("Test Component");
+    }
+
+    [Fact]
+    public void upsert_range_overwrites_existing_component_definition()
+    {
+        registry.Upsert(new AllowedComponentDefinition(
+            ComponentKey: "gh_guid:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            DisplayName: "Old",
+            Category: "Test",
+            Inputs: [],
+            Outputs: [],
+            ConfigFields: []));
+
+        registry.UpsertRange(
+        [
+            new AllowedComponentDefinition(
+                ComponentKey: "gh_guid:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                DisplayName: "New",
+                Category: "Test",
+                Inputs: [],
+                Outputs: [],
+                ConfigFields: [])
+        ]);
+
+        registry.GetRequired("gh_guid:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb").DisplayName.Should().Be("New");
     }
 }

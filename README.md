@@ -211,6 +211,89 @@ There is no Windows helper script yet. The supported manual path is:
 4. Publish `LiveCanvas.AgentHost`
 5. Run the bridge preflight shown below
 
+## Copilot Tools
+
+`LiveCanvas.AgentHost` now exposes two copilot MCP tools in addition to the existing `gh_*` bridge tools:
+
+- `copilot_plan`
+  - host-only capable on macOS, Windows, and Linux
+  - accepts `prompt` plus optional `image_paths`
+  - validates image paths before any model call
+  - returns a server-emitted `execution_plan`
+- `copilot_apply_plan`
+  - requires the live Rhino + Grasshopper bridge
+  - executes a previously emitted `execution_plan`
+  - writes `preview.png` and `document.gh` into the selected output directory
+
+`copilot_plan` image constraints:
+
+- paths must be absolute local paths
+- up to 4 images
+- extensions limited to `.png`, `.jpg`, `.jpeg`
+
+The current v1 copilot contract is intentionally strict:
+
+- `execution_plan` is public transport payload, but not an end-user editable surface
+- apply only supports `schema_version = "copilot_execution_plan/v1"`
+- apply creates a new document each attempt
+- no session memory, no existing-definition edit flow, no third-party plugins
+
+## Copilot Provider Configuration
+
+`copilot_plan` uses an OpenAI-compatible `POST /chat/completions` provider configured through environment variables:
+
+- `LIVECANVAS_COPILOT_BASE_URL`
+- `LIVECANVAS_COPILOT_API_KEY`
+- `LIVECANVAS_COPILOT_MODEL`
+
+If these are missing, `copilot_plan` returns a clear MCP tool-unavailable error instead of failing with an internal server error.
+
+## Copilot Workflow Example
+
+Example `copilot_plan` call:
+
+```json
+{
+  "name": "copilot_plan",
+  "arguments": {
+    "prompt": "Create a stepped tower with a low podium and a slender upper volume",
+    "image_paths": ["/absolute/path/to/reference.png"]
+  }
+}
+```
+
+Example `copilot_apply_plan` call:
+
+```json
+{
+  "name": "copilot_apply_plan",
+  "arguments": {
+    "execution_plan": "<structuredContent from copilot_plan>",
+    "output_dir": "/absolute/path/to/output",
+    "preview_width": 1600,
+    "preview_height": 900,
+    "expire_all": true
+  }
+}
+```
+
+Expected fixed artifacts after a successful apply:
+
+- `preview.png`
+- `document.gh`
+
+## Copilot Manual Acceptance Checklist
+
+Use this checklist before handing the feature to broader users:
+
+1. Run `copilot_plan` with one text prompt.
+2. Run `copilot_plan` with one text prompt plus one local image.
+3. Confirm the returned `execution_plan.schema_version` is `copilot_execution_plan/v1`.
+4. Run `copilot_apply_plan` against a live Rhino + Grasshopper session.
+5. Confirm the Grasshopper canvas mutates visibly.
+6. Confirm the output directory contains `preview.png` and `document.gh`.
+7. Keep the smoke harness `manifest.json` and `transcript.json` for traceability.
+
 ## Validation Commands
 
 Host-only:
@@ -246,6 +329,18 @@ Direct smoke harness command:
 
 ```bash
 dotnet run --project tools/LiveCanvas.SmokeHarness/LiveCanvas.SmokeHarness.csproj -- --mode live --live-preflight-timeout-seconds 30
+```
+
+Mock copilot smoke harness command:
+
+```bash
+dotnet run --project tools/LiveCanvas.SmokeHarness/LiveCanvas.SmokeHarness.csproj -- --scenario copilot-absolute-towers
+```
+
+Live copilot smoke harness command:
+
+```bash
+dotnet run --project tools/LiveCanvas.SmokeHarness/LiveCanvas.SmokeHarness.csproj -- --mode live --scenario copilot-absolute-towers --live-preflight-timeout-seconds 30
 ```
 
 ## Use From An MCP-Capable Coding Agent
@@ -312,6 +407,9 @@ If Rhino exposes an active document and viewport, the run may also write `previe
 - Plugin assembly references assume default Rhino installation paths.
 - The legacy `codelistener.rhi` artifact remains in the repository for historical context and is not the active LiveCanvas plugin.
 - Some test projects still need cleanup for fully deterministic fresh-clone test parity.
+- Copilot v1 always creates a new document and does not edit an existing Grasshopper definition.
+- Copilot v1 only uses dimensions and structural hints to drive output; richer visual style hints are preserved in the brief but not applied to geometry generation.
+- Copilot execution plans are emitted by the server and are not a supported hand-authored editing surface.
 
 ## Related Notes
 

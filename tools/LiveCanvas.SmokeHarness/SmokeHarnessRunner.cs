@@ -5,6 +5,7 @@ using System.Text.Json;
 using LiveCanvas.Bridge.Protocol;
 using LiveCanvas.Bridge.Protocol.Serialization;
 using LiveCanvas.Contracts.Components;
+using LiveCanvas.Contracts.Copilot;
 using LiveCanvas.Contracts.Documents;
 using LiveCanvas.Contracts.Session;
 
@@ -24,12 +25,15 @@ public sealed class SmokeHarnessRunner
         "gh_list_allowed_components",
         "gh_add_component",
         "gh_configure_component",
+        "gh_configure_component_v2",
         "gh_connect",
         "gh_delete_component",
         "gh_solve",
         "gh_inspect_document",
         "gh_capture_preview",
-        "gh_save_document"
+        "gh_save_document",
+        "copilot_plan",
+        "copilot_apply_plan"
     ];
 
     private static readonly SmokeScenarioDefinition SmokeScenario = new(
@@ -180,6 +184,10 @@ public sealed class SmokeHarnessRunner
             {
                 await using var bridge = await MockBridgeServer.StartAsync(cancellationToken).ConfigureAwait(false);
                 context.BridgeUri = bridge.BridgeUri;
+                await using var copilotProvider = options.Scenario == SmokeHarnessScenario.CopilotAbsoluteTowers
+                    ? await MockCopilotProviderServer.StartAsync(cancellationToken).ConfigureAwait(false)
+                    : null;
+                context.CopilotProviderBaseUrl = copilotProvider?.BaseUrl;
                 await RunChecksAsync(context, cancellationToken).ConfigureAwait(false);
             }
             else
@@ -247,7 +255,9 @@ public sealed class SmokeHarnessRunner
         if (context.Options.RunMcpCheck)
         {
             var agentHostDllPath = await ResolveAgentHostDllPathAsync(context, cancellationToken).ConfigureAwait(false);
-            var session = await RunMcpCheckAsync(context, agentHostDllPath, bridgeUri, cancellationToken).ConfigureAwait(false);
+            var session = context.Options.Scenario == SmokeHarnessScenario.CopilotAbsoluteTowers
+                ? await RunCopilotMcpCheckAsync(context, agentHostDllPath, bridgeUri, cancellationToken).ConfigureAwait(false)
+                : await RunMcpCheckAsync(context, agentHostDllPath, bridgeUri, cancellationToken).ConfigureAwait(false);
             context.SessionSummary ??= new SmokeSessionSummary(session.Platform, session.RhinoVersion, session.ToolVersion);
             context.AddCompletedCheck($"mcp-stdio-{context.Options.Mode.ToString().ToLowerInvariant()}");
         }
@@ -349,7 +359,7 @@ public sealed class SmokeHarnessRunner
 
             if (!ExpectedTools.SequenceEqual(listedTools))
             {
-                throw new SmokeHarnessFailureException("tool_surface_mismatch", "AgentHost tools/list response did not match the expected v0 tool surface.");
+                throw new SmokeHarnessFailureException("tool_surface_mismatch", "AgentHost tools/list response did not match the expected tool surface.");
             }
 
             var sessionInfoJson = await CallToolAsync(process, context, 3, "gh_session_info", new { }, cancellationToken).ConfigureAwait(false);
@@ -486,6 +496,121 @@ public sealed class SmokeHarnessRunner
             : new GhSessionInfoResponse(true, context.SessionSummary.RhinoVersion, context.SessionSummary.Platform, true, null, scenario.Components.Count, "Meters", 0.01, context.SessionSummary.ToolVersion);
     }
 
+    private static async Task<GhSessionInfoResponse> RunCopilotMcpCheckAsync(
+        HarnessRunContext context,
+        string agentHostDllPath,
+        string bridgeUri,
+        CancellationToken cancellationToken)
+    {
+        var processStartInfo = new ProcessStartInfo("dotnet", $"\"{agentHostDllPath}\"")
+        {
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false
+        };
+        processStartInfo.Environment["LIVECANVAS_BRIDGE_URI"] = bridgeUri;
+        if (!string.IsNullOrWhiteSpace(context.CopilotProviderBaseUrl))
+        {
+            processStartInfo.Environment["LIVECANVAS_COPILOT_BASE_URL"] = context.CopilotProviderBaseUrl;
+            processStartInfo.Environment["LIVECANVAS_COPILOT_API_KEY"] = "mock-api-key";
+            processStartInfo.Environment["LIVECANVAS_COPILOT_MODEL"] = "mock-model";
+        }
+
+        using var process = Process.Start(processStartInfo)
+            ?? throw new SmokeHarnessFailureException("agenthost_start_failed", "Failed to start the LiveCanvas.AgentHost process.");
+        context.AddEvent("process", "process", "agenthost_start", new { agentHostDllPath, bridgeUri, copilot = true }, new { pid = process.Id }, true);
+
+        var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        var exitCode = 0;
+        string? stderr = null;
+
+        try
+        {
+            await SendMcpMessageAndReadResultAsync(process, context, 1, "initialize", new { }, cancellationToken).ConfigureAwait(false);
+            await SendMcpNotificationAsync(process, context, "notifications/initialized", new { }, cancellationToken).ConfigureAwait(false);
+
+            var toolsResult = await SendMcpMessageAndReadResultAsync(process, context, 2, "tools/list", new { }, cancellationToken).ConfigureAwait(false);
+            var listedTools = toolsResult
+                .GetProperty("tools")
+                .EnumerateArray()
+                .Select(item => item.GetProperty("name").GetString())
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .ToArray();
+
+            if (!ExpectedTools.SequenceEqual(listedTools))
+            {
+                throw new SmokeHarnessFailureException("tool_surface_mismatch", "AgentHost tools/list response did not match the expected tool surface.");
+            }
+
+            var sessionInfoJson = await CallToolAsync(process, context, 3, "gh_session_info", new { }, cancellationToken).ConfigureAwait(false);
+            var sessionInfo = Deserialize<GhSessionInfoResponse>(sessionInfoJson);
+            context.SessionSummary = new SmokeSessionSummary(sessionInfo.Platform, sessionInfo.RhinoVersion, sessionInfo.ToolVersion);
+            if (!sessionInfo.RhinoRunning || !sessionInfo.GrasshopperLoaded)
+            {
+                throw new SmokeHarnessFailureException("live_precondition_failed", "gh_session_info did not report a healthy session.");
+            }
+
+            var referenceImagePath = await WriteReferenceImageAsync(context, cancellationToken).ConfigureAwait(false);
+            var planJson = await CallToolAsync(process, context, 4, "copilot_plan", new
+            {
+                prompt = "Create a cluster of absolute towers with a podium",
+                image_paths = new[] { referenceImagePath }
+            }, cancellationToken).ConfigureAwait(false);
+            var planResponse = Deserialize<CopilotPlanResponse>(planJson);
+            if (!string.Equals(planResponse.ExecutionPlan.SchemaVersion, "copilot_execution_plan/v1", StringComparison.Ordinal))
+            {
+                throw new SmokeHarnessFailureException("tool_call_failed", "copilot_plan returned an unexpected schema_version.");
+            }
+
+            var applyJson = await CallToolAsync(process, context, 5, "copilot_apply_plan", new
+            {
+                execution_plan = planResponse.ExecutionPlan,
+                output_dir = context.OutputDirectory,
+                preview_width = 640,
+                preview_height = 360,
+                expire_all = true
+            }, cancellationToken).ConfigureAwait(false);
+            var applyResponse = Deserialize<CopilotApplyPlanResponse>(applyJson);
+            AddWarnings(context, applyResponse.Warnings);
+            if (!string.Equals(applyResponse.Status, "succeeded", StringComparison.Ordinal))
+            {
+                throw new SmokeHarnessFailureException("tool_call_failed", $"copilot_apply_plan finished with status '{applyResponse.Status}'.");
+            }
+
+            EnsureArtifactExists(context.PreviewPath, "preview.png");
+            EnsureArtifactExists(context.GhPath, "document.gh");
+            context.AddEvent("artifact", "filesystem", "preview_write", new { path = context.PreviewPath }, new { bytes = new FileInfo(context.PreviewPath).Length }, true);
+            context.AddEvent("artifact", "filesystem", "gh_write", new { path = context.GhPath }, new { bytes = new FileInfo(context.GhPath).Length }, true);
+        }
+        finally
+        {
+            process.StandardInput.Close();
+            await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
+            stderr = await stderrTask.ConfigureAwait(false);
+            exitCode = process.ExitCode;
+            context.AddEvent("process", "process", "agenthost_stop", null, new { exitCode, stderr }, exitCode == 0);
+        }
+
+        if (exitCode != 0)
+        {
+            throw new SmokeHarnessFailureException("agenthost_start_failed", $"LiveCanvas.AgentHost exited with code {exitCode}. {stderr}".Trim());
+        }
+
+        return context.SessionSummary is null
+            ? new GhSessionInfoResponse(true, null, "unknown", true, null, 0, "Meters", 0.01, "unknown")
+            : new GhSessionInfoResponse(
+                RhinoRunning: true,
+                RhinoVersion: context.SessionSummary.RhinoVersion,
+                Platform: context.SessionSummary.Platform,
+                GrasshopperLoaded: true,
+                ActiveDocumentName: null,
+                DocumentObjectCount: 0,
+                Units: "Meters",
+                ModelTolerance: 0.01,
+                ToolVersion: context.SessionSummary.ToolVersion);
+    }
+
     private static async Task<string> ResolveAgentHostDllPathAsync(HarnessRunContext context, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(context.Options.AgentHostDllPath))
@@ -538,6 +663,14 @@ public sealed class SmokeHarnessRunner
         foreach (var message in messages.Where(message => string.Equals(message.Level, "warning", StringComparison.OrdinalIgnoreCase)))
         {
             context.AddWarning($"{phase}: {message.Text}");
+        }
+    }
+
+    private static void AddWarnings(HarnessRunContext context, IEnumerable<string> warnings)
+    {
+        foreach (var warning in warnings.Where(warning => !string.IsNullOrWhiteSpace(warning)))
+        {
+            context.AddWarning(warning);
         }
     }
 
@@ -785,6 +918,14 @@ public sealed class SmokeHarnessRunner
 
     private static JsonElement ParseJson(string json) => JsonDocument.Parse(json).RootElement.Clone();
 
+    private static async Task<string> WriteReferenceImageAsync(HarnessRunContext context, CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(context.OutputDirectory, "reference.png");
+        var bytes = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5wsAAAAASUVORK5CYII=");
+        await File.WriteAllBytesAsync(path, bytes, cancellationToken).ConfigureAwait(false);
+        return path;
+    }
+
     private static string NormalizeError(Exception exception) =>
         exception switch
         {
@@ -822,6 +963,7 @@ public sealed class SmokeHarnessRunner
         {
             SmokeHarnessScenario.Smoke => SmokeScenario,
             SmokeHarnessScenario.AbsoluteTowers => AbsoluteTowersScenario,
+            SmokeHarnessScenario.CopilotAbsoluteTowers => throw new SmokeHarnessFailureException("cli_usage", "copilot-absolute-towers is a copilot-only scenario and does not map to the raw gh_* graph runner."),
             _ => throw new SmokeHarnessFailureException("cli_usage", $"Unsupported smoke harness scenario '{scenario}'.")
         };
 

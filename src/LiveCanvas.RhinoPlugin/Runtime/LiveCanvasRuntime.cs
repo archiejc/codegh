@@ -1,8 +1,10 @@
 using System.Drawing;
 using Grasshopper;
+using Grasshopper.Kernel.Data;
 using Grasshopper.GUI.Base;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Special;
+using Grasshopper.Kernel.Types;
 using LiveCanvas.Contracts.Components;
 using LiveCanvas.Contracts.Documents;
 using LiveCanvas.Contracts.Session;
@@ -20,7 +22,10 @@ public sealed class LiveCanvasRuntime
 {
     private readonly AllowedComponentRegistry allowedComponentRegistry;
     private readonly ComponentConfigValidator componentConfigValidator;
+    private readonly ComponentConfigV2Validator componentConfigV2Validator;
     private readonly ConnectionValidator connectionValidator;
+    private readonly GrasshopperComponentDiscovery componentDiscovery = new();
+    private bool hasDiscoveredComponents;
     private readonly Dictionary<string, Guid> builtinProxyIdsByComponentKey = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> componentKeysById = new(StringComparer.Ordinal);
     private readonly List<StoredConnection> connections = [];
@@ -29,10 +34,12 @@ public sealed class LiveCanvasRuntime
     public LiveCanvasRuntime(
         AllowedComponentRegistry allowedComponentRegistry,
         ComponentConfigValidator componentConfigValidator,
+        ComponentConfigV2Validator componentConfigV2Validator,
         ConnectionValidator connectionValidator)
     {
         this.allowedComponentRegistry = allowedComponentRegistry;
         this.componentConfigValidator = componentConfigValidator;
+        this.componentConfigV2Validator = componentConfigV2Validator;
         this.connectionValidator = connectionValidator;
     }
 
@@ -88,12 +95,12 @@ public sealed class LiveCanvasRuntime
     }
 
     public GhListAllowedComponentsResponse ListAllowedComponents() =>
-        new(allowedComponentRegistry.All());
+        new(EnsureDiscoveredAllowedComponents());
 
     public GhAddComponentResponse AddComponent(GhAddComponentRequest request)
     {
         var document = RequireOwnedDocument();
-        var definition = allowedComponentRegistry.GetRequired(request.ComponentKey);
+        var definition = EnsureAllowedComponentDefinition(request.ComponentKey);
         var docObject = CreateDocumentObject(request.ComponentKey);
 
         docObject.CreateAttributes();
@@ -143,6 +150,45 @@ public sealed class LiveCanvasRuntime
             Applied: true,
             NormalizedConfig: normalized,
             Warnings: Array.Empty<string>());
+    }
+
+    public GhConfigureComponentV2Response ConfigureComponentV2(GhConfigureComponentV2Request request)
+    {
+        var docObject = ResolveOwnedObject(request.ComponentId);
+        var componentKey = ResolveComponentKey(request.ComponentId);
+        var normalized = componentConfigV2Validator.ValidateAndNormalize(componentKey, request.Config);
+        var warnings = new List<string>();
+
+        foreach (var op in normalized.Ops)
+        {
+            switch (op)
+            {
+                case SetNicknameComponentConfigOp setNickname:
+                    docObject.NickName = setNickname.Value;
+                    break;
+                case SetInputPersistentDataComponentConfigOp setPersistentData:
+                    ApplyPersistentData(request.ComponentId, setPersistentData.Input, setPersistentData.Value);
+                    break;
+                case ClearInputPersistentDataComponentConfigOp clearPersistentData:
+                    ClearPersistentData(request.ComponentId, clearPersistentData.Input);
+                    break;
+                case SetParamFlagsComponentConfigOp setParamFlags:
+                    ApplyParamFlags(request.ComponentId, setParamFlags);
+                    break;
+                case AdapterConfigComponentConfigOp adapterConfig:
+                    ApplyAdapterConfig(docObject, adapterConfig.Config, warnings);
+                    break;
+                default:
+                    throw new ArgumentException($"Unsupported component config op '{op.GetType().Name}'.");
+            }
+        }
+
+        docObject.ExpireSolution(false);
+        return new GhConfigureComponentV2Response(
+            request.ComponentId,
+            Applied: true,
+            NormalizedConfig: normalized,
+            Warnings: warnings);
     }
 
     public GhConnectResponse Connect(GhConnectRequest request)
@@ -373,8 +419,24 @@ public sealed class LiveCanvasRuntime
             V0ComponentKeys.NumberSlider => new GH_NumberSlider(),
             V0ComponentKeys.Panel => new GH_Panel(),
             V0ComponentKeys.ColourSwatch => new GH_ColourSwatch(),
-            _ => EmitBuiltinObject(componentKey)
+            _ => EmitComponentObject(componentKey)
         };
+
+    private IGH_DocumentObject EmitComponentObject(string componentKey)
+    {
+        if (GrasshopperComponentDiscovery.TryParseGuidKey(componentKey, out var proxyGuid))
+        {
+            var emitted = Instances.ComponentServer.EmitObject(proxyGuid);
+            if (emitted is null)
+            {
+                throw new InvalidOperationException($"Grasshopper could not emit component proxy '{proxyGuid:N}'.");
+            }
+
+            return emitted;
+        }
+
+        return EmitBuiltinObject(componentKey);
+    }
 
     private IGH_DocumentObject EmitBuiltinObject(string componentKey)
     {
@@ -428,6 +490,42 @@ public sealed class LiveCanvasRuntime
         builtinProxyIdsByComponentKey[componentKey] = bestProxyId;
         LiveCanvasLog.Write($"runtime resolved componentKey={componentKey} displayName={definition.DisplayName} proxy={bestProxyId} score={bestScore} type={bestObject.GetType().FullName}");
         return bestObject;
+    }
+
+    private IReadOnlyList<AllowedComponentDefinition> EnsureDiscoveredAllowedComponents()
+    {
+        EnsureGrasshopperEditorLoaded();
+        if (!hasDiscoveredComponents)
+        {
+            var discovered = componentDiscovery.DiscoverAll();
+            allowedComponentRegistry.UpsertRange(discovered);
+            hasDiscoveredComponents = true;
+        }
+
+        return allowedComponentRegistry.All();
+    }
+
+    private AllowedComponentDefinition EnsureAllowedComponentDefinition(string componentKey)
+    {
+        if (allowedComponentRegistry.TryGet(componentKey, out var definition) && definition is not null)
+        {
+            return definition;
+        }
+
+        EnsureGrasshopperEditorLoaded();
+
+        if (GrasshopperComponentDiscovery.TryParseGuidKey(componentKey, out var proxyGuid))
+        {
+            var discovered = componentDiscovery.TryCreateDefinition(proxyGuid);
+            if (discovered is not null)
+            {
+                allowedComponentRegistry.Upsert(discovered);
+                return discovered;
+            }
+        }
+
+        // Fall back to the existing registry behavior for v0 keys (or anything already registered).
+        return allowedComponentRegistry.GetRequired(componentKey);
     }
 
     private IGH_DocumentObject ResolveOwnedObject(string componentId)
@@ -567,6 +665,158 @@ public sealed class LiveCanvasRuntime
 
         return length == 0 ? string.Empty : new string(buffer[..length]);
     }
+
+    private void ApplyPersistentData(string componentId, string inputName, GhValue value)
+    {
+        var input = ResolvePort(componentId, inputName, isInput: true);
+        if (input.SourceCount > 0)
+        {
+            throw new ArgumentException($"Cannot set persistent data on input '{inputName}' because it already has source wires.");
+        }
+
+        var values = FlattenPersistentDataValues(value).ToArray();
+        var setPersistentData = input.GetType().GetMethod("SetPersistentData", [typeof(object[])]);
+        var clearPersistentData = input.GetType().GetMethod("Script_ClearPersistentData", Type.EmptyTypes);
+        if (setPersistentData is null || clearPersistentData is null)
+        {
+            throw new ArgumentException($"Input '{inputName}' does not support persistent data.");
+        }
+
+        clearPersistentData.Invoke(input, []);
+        setPersistentData.Invoke(input, [values]);
+        input.ExpireSolution(false);
+    }
+
+    private void ClearPersistentData(string componentId, string inputName)
+    {
+        var input = ResolvePort(componentId, inputName, isInput: true);
+        var clearPersistentData = input.GetType().GetMethod("Script_ClearPersistentData", Type.EmptyTypes);
+        if (clearPersistentData is null)
+        {
+            throw new ArgumentException($"Input '{inputName}' does not support persistent data.");
+        }
+
+        clearPersistentData.Invoke(input, []);
+        input.ExpireSolution(false);
+    }
+
+    private void ApplyParamFlags(string componentId, SetParamFlagsComponentConfigOp op)
+    {
+        var componentKey = ResolveComponentKey(componentId);
+        var definition = allowedComponentRegistry.GetRequired(componentKey);
+        var isInput = definition.Inputs.Any(port => string.Equals(port.Name, op.Param, StringComparison.Ordinal));
+        var param = ResolvePort(componentId, op.Param, isInput);
+
+        if (op.Flatten == true)
+        {
+            param.DataMapping = GH_DataMapping.Flatten;
+        }
+        else if (op.Graft == true)
+        {
+            param.DataMapping = GH_DataMapping.Graft;
+        }
+        else if (op.Flatten == false || op.Graft == false)
+        {
+            param.DataMapping = GH_DataMapping.None;
+        }
+
+        if (op.Simplify.HasValue)
+        {
+            param.Simplify = op.Simplify.Value;
+        }
+
+        param.ExpireSolution(false);
+    }
+
+    private void ApplyAdapterConfig(IGH_DocumentObject docObject, GhComponentAdapterConfig config, List<string> warnings)
+    {
+        switch (config)
+        {
+            case NumberSliderAdapterConfig slider when docObject is GH_NumberSlider sliderObject:
+                ConfigureSlider(sliderObject, new SliderConfig(slider.Min, slider.Max, slider.Value, slider.Integer));
+                return;
+            case PanelAdapterConfig panel when docObject is GH_Panel panelObject:
+                ConfigurePanel(panelObject, new PanelConfig(panel.Text, panel.Multiline));
+                return;
+            case ColourSwatchAdapterConfig colour when docObject is GH_ColourSwatch swatch:
+                ConfigureColourSwatch(swatch, new ColourSwatchConfig(colour.R, colour.G, colour.B, colour.A));
+                return;
+            case BooleanToggleAdapterConfig toggle when docObject is GH_BooleanToggle booleanToggle:
+                booleanToggle.Value = toggle.Value ?? false;
+                return;
+            case ValueListAdapterConfig valueList when docObject is GH_ValueList ghValueList:
+                ConfigureValueList(ghValueList, valueList, warnings);
+                return;
+            default:
+                throw new ArgumentException($"Adapter config '{config.GetType().Name}' is not supported for component '{docObject.Name}'.");
+        }
+    }
+
+    private static void ConfigureValueList(GH_ValueList valueList, ValueListAdapterConfig config, List<string> warnings)
+    {
+        if (config.Items is not null)
+        {
+            valueList.ListItems.Clear();
+            foreach (var item in config.Items)
+            {
+                valueList.ListItems.Add(new GH_ValueListItem(item.Name, item.Expression));
+            }
+        }
+
+        if (config.SelectedIndex.HasValue)
+        {
+            if (config.SelectedIndex.Value < 0 || config.SelectedIndex.Value >= valueList.ListItems.Count)
+            {
+                throw new ArgumentException($"Value List selected_index {config.SelectedIndex.Value} is out of range.");
+            }
+
+            valueList.SelectItem(config.SelectedIndex.Value);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(config.SelectedName))
+        {
+            var index = valueList.ListItems.FindIndex(item => string.Equals(item.Name, config.SelectedName, StringComparison.Ordinal));
+            if (index < 0)
+            {
+                throw new ArgumentException($"Value List item '{config.SelectedName}' does not exist.");
+            }
+
+            valueList.SelectItem(index);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(config.SelectedExpression))
+        {
+            var index = valueList.ListItems.FindIndex(item => string.Equals(item.Expression, config.SelectedExpression, StringComparison.Ordinal));
+            if (index < 0)
+            {
+                throw new ArgumentException($"Value List expression '{config.SelectedExpression}' does not exist.");
+            }
+
+            valueList.SelectItem(index);
+            return;
+        }
+
+        if (config.Items is not null && valueList.ListItems.Count > 0)
+        {
+            warnings.Add("value_list_selection_preserved");
+        }
+    }
+
+    private static IEnumerable<object> FlattenPersistentDataValues(GhValue value) =>
+        value switch
+        {
+            GhNumberValue number => [number.Value],
+            GhIntegerValue integer => [integer.Value],
+            GhBooleanValue boolean => [boolean.Value],
+            GhStringValue text => [text.Value],
+            GhPoint3dValue point => [new Point3d(point.X, point.Y, point.Z)],
+            GhVector3dValue vector => [new Vector3d(vector.X, vector.Y, vector.Z)],
+            GhColorValue color => [Color.FromArgb(color.A, color.R, color.G, color.B)],
+            GhListValue list => list.Items.SelectMany(FlattenPersistentDataValues),
+            _ => throw new ArgumentException($"Unsupported persistent data value type '{value.GetType().Name}'.")
+        };
 
     private static void ConfigureSlider(GH_NumberSlider slider, SliderConfig sliderConfig)
     {

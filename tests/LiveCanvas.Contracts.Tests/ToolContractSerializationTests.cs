@@ -79,4 +79,25 @@ public class ToolContractSerializationTests
         json.Should().Contain("configFields");
         json.Should().Contain("integer");
     }
+
+    [Fact]
+    public void component_config_v2_schema_round_trips_polymorphic_ops()
+    {
+        var payload = new GhComponentConfigV2(
+            "gh_component_config/v2",
+            [
+                new SetNicknameComponentConfigOp("height"),
+                new SetInputPersistentDataComponentConfigOp("R", new GhNumberValue(12.5)),
+                new SetParamFlagsComponentConfigOp("R", Flatten: true, Simplify: true),
+                new AdapterConfigComponentConfigOp(new NumberSliderAdapterConfig(0, 100, 50, false))
+            ]);
+
+        var json = JsonSerializer.Serialize(payload, JsonOptions);
+        var roundTripped = JsonSerializer.Deserialize<GhComponentConfigV2>(json, JsonOptions);
+
+        roundTripped.Should().BeEquivalentTo(payload);
+        json.Should().Contain("schema_version");
+        json.Should().Contain("set_input_persistent_data");
+        json.Should().Contain("number_slider");
+    }
 }

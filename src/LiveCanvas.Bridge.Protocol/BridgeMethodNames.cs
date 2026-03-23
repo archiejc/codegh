@@ -7,6 +7,7 @@ public static class BridgeMethodNames
     public const string GhListAllowedComponents = "gh_list_allowed_components";
     public const string GhAddComponent = "gh_add_component";
     public const string GhConfigureComponent = "gh_configure_component";
+    public const string GhConfigureComponentV2 = "gh_configure_component_v2";
     public const string GhConnect = "gh_connect";
     public const string GhDeleteComponent = "gh_delete_component";
     public const string GhSolve = "gh_solve";
@@ -21,6 +22,7 @@ public static class BridgeMethodNames
         GhListAllowedComponents,
         GhAddComponent,
         GhConfigureComponent,
+        GhConfigureComponentV2,
         GhConnect,
         GhDeleteComponent,
         GhSolve,

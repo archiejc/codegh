@@ -36,6 +36,7 @@ public sealed class LiveCanvasBridgeDispatcher
             BridgeMethodNames.GhListAllowedComponents => runtime.ListAllowedComponents(),
             BridgeMethodNames.GhAddComponent => runtime.AddComponent(BridgeJsonSerializer.DeserializeParams<GhAddComponentRequest>(envelope.Params)),
             BridgeMethodNames.GhConfigureComponent => runtime.ConfigureComponent(BridgeJsonSerializer.DeserializeParams<GhConfigureComponentRequest>(envelope.Params)),
+            BridgeMethodNames.GhConfigureComponentV2 => runtime.ConfigureComponentV2(BridgeJsonSerializer.DeserializeParams<GhConfigureComponentV2Request>(envelope.Params)),
             BridgeMethodNames.GhConnect => runtime.Connect(BridgeJsonSerializer.DeserializeParams<GhConnectRequest>(envelope.Params)),
             BridgeMethodNames.GhDeleteComponent => runtime.DeleteComponent(BridgeJsonSerializer.DeserializeParams<GhDeleteComponentRequest>(envelope.Params)),
             BridgeMethodNames.GhSolve => runtime.Solve(BridgeJsonSerializer.DeserializeParams<GhSolveRequest>(envelope.Params)),

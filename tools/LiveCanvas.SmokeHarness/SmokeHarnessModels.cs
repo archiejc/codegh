@@ -31,7 +31,8 @@ public enum SmokeHarnessMode
 public enum SmokeHarnessScenario
 {
     Smoke,
-    AbsoluteTowers
+    AbsoluteTowers,
+    CopilotAbsoluteTowers
 }
 
 internal sealed record SmokeSessionSummary(
@@ -96,6 +97,8 @@ internal sealed class HarnessRunContext
 
     public string? BridgeUri { get; set; }
 
+    public string? CopilotProviderBaseUrl { get; set; }
+
     public DateTimeOffset StartedUtc { get; }
 
     public DateTimeOffset? FinishedUtc { get; set; }
@@ -155,6 +158,7 @@ internal sealed class HarnessRunContext
         {
             SmokeHarnessScenario.Smoke => "smoke.gh",
             SmokeHarnessScenario.AbsoluteTowers => "absolute-towers.gh",
+            SmokeHarnessScenario.CopilotAbsoluteTowers => "document.gh",
             _ => "scene.gh"
         };
 }
