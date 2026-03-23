@@ -75,6 +75,20 @@ Agent / IDE
 - Host-only MCP publish and stdio smoke verification are supported
 - Rhino plugin and live bridge workflow are not supported
 
+## Detailed Install Guide
+
+For a step-by-step setup guide that covers:
+
+- macOS Live install
+- Windows Live install
+- Codex MCP configuration
+- smoke validation and live bridge validation
+- a ready-to-paste Codex demo prompt
+
+see:
+
+- `docs/install-mcp-macos-windows.md`
+
 ## Quick Start (Host-Only, All Platforms)
 
 This path is the safest fresh-clone entrypoint and does not require Rhino.
